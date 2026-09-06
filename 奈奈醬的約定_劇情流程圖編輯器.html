@@ -1,0 +1,2543 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>《奈奈醬的約定》劇情流程圖編輯器 v6（已重編・已修復死路・結局已合併分類）</title>
+<style>
+:root {
+  --bg: #101019;
+  --bg-dot: #1b1b28;
+  --panel-bg: #191924;
+  --panel-bg-2: #1f1f2c;
+  --border: #2b2b3b;
+  --border-soft: #23232f;
+  --text: #eae6dd;
+  --text-dim: #9994a8;
+  --accent: #e3a542;
+  --accent-soft: #6b5426;
+
+  --node-normal: #4b5468;
+  --node-normal-bg: #23273a;
+  --node-decision: #9b7fe0;
+  --node-decision-bg: #2a2440;
+  --node-option: #45b8ac;
+  --node-option-bg: #1c3634;
+  --node-merge: #e08a45;
+  --node-merge-bg: #3a2a1c;
+  --node-stage: #6f95d6;
+  --node-stage-bg: #1c2c48;
+  --node-ending: #d1596b;
+  --node-ending-bg: #3a2027;
+
+  --edge-color: #6a6a80;
+  --num-pos: #5fd692;
+  --num-neg: #ff6b76;
+}
+
+.fc-node.is-on-path {
+  box-shadow: 0 0 0 2px #5fd692, 0 4px 14px rgba(95,214,146,.28);
+}
+.fc-node.is-original.is-on-path {
+  box-shadow: 0 0 0 2px #5fd692, 0 0 0 4px rgba(227,165,66,.28);
+}
+.fc-node.is-selected.is-on-path {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px rgba(227,165,66,.25), 0 4px 14px rgba(95,214,146,.2);
+}
+.fc-node.is-path-pin {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px rgba(227,165,66,.22);
+}
+.fc-node.is-cond-met {
+  outline: 2px solid #5fd692;
+  outline-offset: 2px;
+}
+.fc-node.is-cond-unmet {
+  outline: 2px solid #ff6b76;
+  outline-offset: 2px;
+}
+.fc-edge-g.is-cond-met .fc-edge-label { fill: #5fd692; font-weight: 700; }
+.fc-edge-g.is-cond-unmet .fc-edge-label { fill: #ff6b76; font-weight: 700; }
+.fc-edge-g.is-cond-met .fc-edge-line { stroke: #4aa87a; }
+.fc-edge-g.is-cond-unmet .fc-edge-line { stroke: #c45660; }
+
+#pathPanel {
+  position: relative;
+  flex: 0 0 300px;
+  width: 300px;
+  min-width: 180px;
+  max-width: 640px;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+}
+#pathPanelResizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 9;
+  background: transparent;
+}
+#pathPanelResizer:hover,
+#pathPanelResizer.is-dragging {
+  background: rgba(227,165,66,.35);
+}
+body.is-resizing-pathpanel {
+  cursor: col-resize !important;
+  user-select: none;
+}
+.path-panel-head {
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.path-panel-head h2 { font-size: 13.5px; margin: 0; font-weight: 700; }
+.path-panel-hint {
+  padding: 8px 14px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.55;
+  border-bottom: 1px solid var(--border-soft);
+}
+#pathMeta {
+  padding: 6px 14px 8px;
+  font-size: 11px;
+  color: var(--accent);
+}
+#pathStats { padding: 8px 14px 4px; }
+.path-stat { margin-bottom: 8px; }
+.path-stat-top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 11.5px; margin-bottom: 3px;
+}
+.path-stat-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+.path-stat-val small { font-weight: 600; opacity: .8; }
+.path-stat-val.tone-good { color: var(--num-pos); }
+.path-stat-val.tone-bad { color: var(--num-neg); }
+.path-stat-val.tone-mid { color: var(--text); }
+.path-bar {
+  position: relative; height: 7px; border-radius: 99px;
+  background: #2a2a38; overflow: hidden;
+}
+.path-bar-fill { height: 100%; border-radius: 99px; }
+.path-bar-fill.tone-good { background: #5fd692; }
+.path-bar-fill.tone-bad { background: #ff6b76; }
+.path-bar-fill.tone-mid { background: #c4b07a; }
+.path-bar-mark {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: rgba(255,255,255,.35); pointer-events: none;
+}
+#pathFlags {
+  padding: 4px 14px 10px;
+  display: flex; flex-wrap: wrap; gap: 5px;
+}
+.path-flag {
+  font-size: 10.5px; border-radius: 99px; padding: 2px 8px;
+  border: 1px solid var(--border);
+}
+.path-flag.is-on { color: #b7f0cc; background: #1c3a2c; border-color: #2e6b4a; }
+.path-flag.is-off { color: var(--text-dim); background: transparent; }
+#pathConds { padding: 0 10px 10px; }
+.path-cond-head {
+  font-size: 11.5px; color: var(--accent); font-weight: 700;
+  padding: 6px 4px 8px;
+}
+.path-cond {
+  font-size: 11.5px; border-radius: 7px; padding: 6px 8px; margin-bottom: 5px;
+  border: 1px solid var(--border);
+}
+.path-cond.is-met { background: #173226; border-color: #2e6b4a; }
+.path-cond.is-unmet { background: #3a1c22; border-color: #6b2732; }
+.path-cond-mark {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  margin-right: 6px; letter-spacing: .3px;
+}
+.path-cond.is-met .path-cond-mark { color: #5fd692; }
+.path-cond.is-unmet .path-cond-mark { color: #ff6b76; }
+.path-cond-label { display: block; margin-top: 2px; line-height: 1.4; }
+.path-cond-where { display: block; margin-top: 2px; font-size: 10.5px; color: var(--text-dim); }
+#pathList { padding: 0 10px 18px; border-top: 1px solid var(--border-soft); }
+.path-step {
+  font-size: 11.5px; padding: 5px 8px; border-radius: 6px; cursor: pointer;
+  color: var(--text-dim); line-height: 1.4;
+}
+.path-step:hover { background: var(--panel-bg-2); color: var(--text); }
+.path-step.is-pin { color: #ffe6b8; }
+.path-step b { color: var(--accent); margin-right: 4px; }
+
+@media (max-width: 1100px) {
+  #pathPanel { display: none; }
+}
+
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ---------------- Toolbar ---------------- */
+#toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #17171f, #131319);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,.35);
+  flex-wrap: wrap;
+  z-index: 20;
+}
+
+.fc-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-right: 10px;
+  white-space: nowrap;
+}
+.fc-brand .lamp { color: var(--accent); font-size: 15px; }
+.fc-brand .title { font-size: 15px; font-weight: 600; letter-spacing: .5px; }
+.fc-brand .sub { font-size: 11px; color: var(--text-dim); }
+
+.fc-toolbar-divider {
+  width: 1px; height: 24px; background: var(--border); margin: 0 4px;
+}
+
+.fc-btn {
+  background: var(--panel-bg-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s, border-color .12s;
+}
+.fc-btn:hover { background: #262636; border-color: #3a3a4d; }
+.fc-btn:active { transform: translateY(1px); }
+.fc-btn.active { background: var(--accent-soft); border-color: var(--accent); color: #ffe6b8; }
+.fc-btn-primary { background: var(--accent); border-color: var(--accent); color: #1c1408; font-weight: 600; }
+.fc-btn-primary:hover { background: #f0b558; }
+.fc-btn-danger { background: #3a1c22; border-color: #6b2732; color: #ffb3bd; }
+.fc-btn-danger:hover { background: #4a2229; }
+.fc-btn-icon { width: 30px; padding: 6px 0; text-align: center; }
+
+#zoomLabel { font-size: 12px; color: var(--text-dim); width: 42px; text-align: center; }
+
+.fc-search-wrap { position: relative; margin-left: auto; }
+#searchInput {
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+  width: 220px;
+}
+#searchInput:focus { outline: none; border-color: var(--accent); }
+#searchResults {
+  display: none;
+  position: absolute;
+  top: 38px; right: 0;
+  width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  z-index: 30;
+}
+#searchResults.open { display: block; }
+.fc-search-hit {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-soft);
+  cursor: pointer;
+}
+.fc-search-hit:hover { background: var(--panel-bg-2); }
+.fc-empty { padding: 10px 12px; color: var(--text-dim); font-size: 12px; }
+
+#statusBar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 16px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: #14141c;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* ---------------- Main layout ---------------- */
+#main {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  position: relative;
+}
+
+#viewport {
+  flex: 1 1 auto;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(var(--bg-dot) 1.4px, transparent 1.4px);
+  background-size: 26px 26px;
+}
+#viewport:active { cursor: grabbing; }
+
+#world {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+}
+
+#edgeSvg {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.fc-edge-line {
+  fill: none;
+  stroke: var(--edge-color);
+  stroke-width: 1.6;
+}
+.fc-edge-line.is-back { stroke-dasharray: 5 4; opacity: .75; }
+.fc-edge-g.is-selected .fc-edge-line { stroke: var(--accent); stroke-width: 2.4; }
+.fc-edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.fc-edge-label {
+  fill: var(--text-dim);
+  font-size: 11px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 4px;
+}
+.fc-edge-g.is-selected .fc-edge-label { fill: var(--accent); }
+.fc-edge-g.is-path-highlight .fc-edge-line {
+  stroke: var(--node-ending);
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 3px rgba(209,89,107,.85));
+}
+.fc-edge-g.is-path-highlight .fc-edge-label { fill: var(--node-ending); font-weight: 600; }
+.fc-edge-g.is-path-highlight.is-selected .fc-edge-line { stroke: var(--accent); }
+.fc-edge-g.is-path-highlight.is-selected .fc-edge-label { fill: var(--accent); }
+
+/* ---------------- Nodes ---------------- */
+.fc-node {
+  position: absolute;
+  border-radius: 10px;
+  border: 1.5px solid var(--node-normal);
+  background: var(--node-normal-bg);
+  padding: 9px 11px 10px;
+  cursor: grab;
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  transition: box-shadow .12s, border-color .12s;
+}
+.fc-node:active { cursor: grabbing; }
+.fc-node:hover { box-shadow: 0 4px 14px rgba(0,0,0,.45); }
+.fc-node.is-selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(227,165,66,.25), 0 4px 14px rgba(0,0,0,.5); }
+.fc-node.is-connect-from { border-color: #ffcf7a; box-shadow: 0 0 0 3px rgba(255,207,122,.35); }
+.fc-node.is-original { box-shadow: 0 0 0 2px var(--accent), 0 4px 14px rgba(227,165,66,.25); }
+.fc-node.is-original.is-selected { box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px rgba(227,165,66,.25); }
+
+.fc-node-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.fc-node-badge { color: var(--accent); font-size: 12px; }
+.fc-node-left { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; }
+.fc-node-code {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(227,165,66,.14);
+  border: 1px solid var(--accent-soft);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  letter-spacing: .2px;
+}
+.fc-node-code:empty { display: none; padding: 0; border: none; }
+.fc-node-type {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: .3px;
+}
+.fc-node-text {
+  font-size: 13px;
+  line-height: 1.42;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 7.2em;
+  overflow: hidden;
+}
+.fc-node-effect {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px dashed var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 6.4em;
+  overflow: hidden;
+}
+.fc-num-pos { color: var(--num-pos); font-weight: 600; }
+.fc-num-neg { color: var(--num-neg); font-weight: 600; }
+.fc-num-odds { color: var(--accent); font-weight: 700; }
+
+.type-decision { border-color: var(--node-decision); background: var(--node-decision-bg); }
+.type-decision .fc-node-type { color: var(--node-decision); }
+.type-option { border-color: var(--node-option); background: var(--node-option-bg); }
+.type-option .fc-node-type { color: var(--node-option); }
+.type-merge { border-color: var(--node-merge); background: var(--node-merge-bg); }
+.type-merge .fc-node-type { color: var(--node-merge); }
+.type-stage { border-color: var(--node-stage); background: var(--node-stage-bg); }
+.type-stage .fc-node-text { font-size: 14.5px; font-weight: 700; }
+.type-stage .fc-node-type { color: var(--node-stage); }
+.type-ending { border-color: var(--node-ending); background: var(--node-ending-bg); }
+.type-ending .fc-node-type { color: var(--node-ending); }
+.type-normal .fc-node-type { color: var(--text-dim); }
+
+/* ---------------- Editor Panel ---------------- */
+#editorPanel {
+  flex: 0 0 340px;
+  width: 340px;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  transform: translateX(340px);
+  transition: transform .18s ease;
+  position: relative;
+  z-index: 10;
+}
+#editorPanel.open { transform: translateX(0); }
+
+.fc-panel-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.fc-panel-header h2 { font-size: 14px; margin: 0; font-weight: 600; }
+.fc-panel-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 18px; cursor: pointer; line-height: 1;
+}
+.fc-panel-close:hover { color: var(--text); }
+
+#editorPanelBody { padding: 14px 16px 24px; }
+
+.fc-field-label {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin: 12px 0 5px;
+}
+.fc-field-label:first-child { margin-top: 0; }
+
+#editorPanelBody textarea,
+#editorPanelBody select,
+#editorPanelBody input[type="text"] {
+  width: 100%;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 8px 9px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+#editorPanelBody textarea:focus,
+#editorPanelBody select:focus,
+#editorPanelBody input[type="text"]:focus { outline: none; border-color: var(--accent); }
+.fc-effect-preview {
+  margin-top: 6px;
+  padding: 7px 9px;
+  background: var(--panel-bg-2);
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 1.4em;
+}
+
+.fc-field-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.fc-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.fc-panel-actions .fc-btn { flex: 1 1 auto; }
+
+.fc-panel-sub {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+.fc-related-edge {
+  font-size: 12.5px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-dim);
+}
+.fc-related-edge:hover { background: var(--panel-bg-2); color: var(--text); }
+.fc-related-label { color: var(--accent); }
+
+.fc-edge-endpoints {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  background: var(--panel-bg-2);
+  border-radius: 7px;
+  padding: 8px 10px;
+  line-height: 1.5;
+}
+
+/* ---------------- Legend ---------------- */
+#legend {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  background: rgba(25,25,36,.92);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  backdrop-filter: blur(4px);
+  z-index: 5;
+  max-width: 220px;
+}
+#legend.is-closed, #hint.is-closed { display: none; }
+#legend .legend-title { color: var(--text); font-size: 12px; margin-bottom: 6px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.overlay-close-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 5px;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0;
+}
+.overlay-close-btn:hover { background: var(--panel-bg-2); color: var(--text); border-color: #3a3a4d; }
+.legend-row { display: flex; align-items: center; gap: 7px; margin: 3px 0; }
+.legend-swatch { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+.legend-swatch.ls-normal { background: var(--node-normal-bg); border: 1.5px solid var(--node-normal); }
+.legend-swatch.ls-decision { background: var(--node-decision-bg); border: 1.5px solid var(--node-decision); }
+.legend-swatch.ls-option { background: var(--node-option-bg); border: 1.5px solid var(--node-option); }
+.legend-swatch.ls-merge { background: var(--node-merge-bg); border: 1.5px solid var(--node-merge); }
+.legend-swatch.ls-stage { background: var(--node-stage-bg); border: 1.5px solid var(--node-stage); }
+.legend-swatch.ls-ending { background: var(--node-ending-bg); border: 1.5px solid var(--node-ending); }
+.legend-swatch.ls-original { background: var(--node-normal-bg); border: 1.5px solid var(--accent); box-shadow: 0 0 0 2px rgba(227,165,66,.3); }
+
+#hint {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  font-size: 11px;
+  color: var(--text-dim);
+  background: rgba(25,25,36,.92);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 30px 8px 11px;
+  z-index: 5;
+  max-width: 260px;
+  line-height: 1.6;
+}
+#hint .overlay-close-btn { position: absolute; top: 6px; right: 6px; }
+#legend { padding-right: 12px; }
+
+/* ---------------- 隱藏數值系統面板 ---------------- */
+#statOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(8,8,12,.6);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+#statOverlay.open { display: flex; }
+#statPanel {
+  width: 640px;
+  max-width: 92vw;
+  max-height: 84vh;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+  padding: 18px 20px 22px;
+}
+.stat-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.stat-panel-head h2 { font-size: 15px; margin: 0; font-weight: 700; }
+.stat-panel-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; }
+.stat-cat-title {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: .5px;
+  margin: 16px 0 8px;
+  text-transform: uppercase;
+}
+.stat-cat-title:first-of-type { margin-top: 4px; }
+.stat-card {
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 8px;
+}
+.stat-card-head { display: flex; align-items: baseline; gap: 8px; }
+.stat-card-name { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.stat-card-range { font-size: 11px; color: var(--text-dim); }
+.stat-card-desc { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.5; }
+.stat-card-alias { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.stat-card-alias b { color: var(--accent); font-weight: 600; }
+
+/* ---------------- 節點編輯器：快速插入數值 ---------------- */
+#statQuickAdd {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+#statQuickAdd select { flex: 1 1 120px; }
+#statQuickAdd input[type="number"] {
+  width: 58px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 8px 6px;
+  font-size: 13px;
+  text-align: center;
+}
+#statQuickAddSign {
+  width: 44px;
+}
+.fc-quickadd-hint { font-size: 11px; color: var(--text-dim); margin-top: 5px; }
+
+@media (max-width: 860px) {
+  #editorPanel { position: fixed; top: 0; right: 0; height: 100%; flex-basis: 88vw; width: 88vw; transform: translateX(88vw); }
+  #legend, #hint { display: none; }
+  .fc-brand .sub { display: none; }
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="toolbar">
+    <div class="fc-brand">
+      <span class="lamp">◐</span>
+      <span class="title">《奈奈醬的約定》劇情流程圖編輯器</span>
+      <span class="sub">全路線互動編輯・可自行新增／修改／刪除</span>
+    </div>
+
+    <button id="addNodeBtn" class="fc-btn">＋ 新增節點</button>
+    <button id="connectModeBtn" class="fc-btn">⤳ 連線模式</button>
+    <div class="fc-toolbar-divider"></div>
+    <button id="undoBtn" class="fc-btn fc-btn-icon" title="復原 (Ctrl+Z)">↶</button>
+    <button id="redoBtn" class="fc-btn fc-btn-icon" title="重做 (Ctrl+Shift+Z)">↷</button>
+    <div class="fc-toolbar-divider"></div>
+    <button id="layoutBtn" class="fc-btn">⇅ 自動排版</button>
+    <button id="zoomOutBtn" class="fc-btn fc-btn-icon">－</button>
+    <span id="zoomLabel">100%</span>
+    <button id="zoomInBtn" class="fc-btn fc-btn-icon">＋</button>
+    <button id="zoomResetBtn" class="fc-btn">置中</button>
+    <div class="fc-toolbar-divider"></div>
+    <button id="saveBtn" class="fc-btn fc-btn-primary" title="儲存於本機瀏覽器（localStorage），無需匯出/匯入 JSON">💾 儲存至本機</button>
+    <button id="autoCodeBtn" class="fc-btn" title="嘗試從節點文字自動拆出開頭的編號（如 A1／路線O），可 Ctrl+Z 復原">🏷 自動偵測編號</button>
+    <button id="statSystemBtn" class="fc-btn" title="檢視隱藏數值定義（10 項；好感度已分角色，容貌焦慮／依存度已併入）">📊 隱藏數值系統</button>
+    <button id="exportBtn" class="fc-btn">匯出 JSON</button>
+    <button id="importBtn" class="fc-btn">匯入 JSON</button>
+    <input type="file" id="importInput" accept="application/json" style="display:none" />
+    <button id="resetBtn" class="fc-btn fc-btn-danger">重置原始版本</button>
+
+    <div class="fc-search-wrap">
+      <input type="text" id="searchInput" placeholder="搜尋節點文字…" />
+      <div id="searchResults"></div>
+    </div>
+  </div>
+
+  <div id="statusBar">
+    <span id="statusText"></span>
+    <span id="countText"></span>
+  </div>
+
+  <div id="main">
+    <aside id="pathPanel">
+      <div class="path-panel-head">
+        <h2>即時累計</h2>
+        <button id="pathClearBtn" class="fc-btn" title="清除已選路徑，數值回到初始 50">清除路徑</button>
+      </div>
+      <div class="path-panel-hint">點選節點，自動加總從序章到該點沿途的隱藏數值（初始皆為 50，範圍 0～100）。同一決策的選項會互相取代；打工／直播／二次元等平行支線可分別點選、一併加總。連線與節點上的判定條件會依目前數值自動標成「已滿足／未滿足」。</div>
+      <div id="pathMeta"></div>
+      <div id="pathStats"></div>
+      <div id="pathFlags"></div>
+      <div id="pathConds"></div>
+      <div id="pathList"></div>
+      <div id="pathPanelResizer" title="拖曳以調整寬度"></div>
+    </aside>
+    <div id="viewport">
+      <div id="world">
+        <svg id="edgeSvg"></svg>
+      </div>
+
+      <div id="legend">
+        <div class="legend-title">圖例 <button type="button" class="overlay-close-btn" id="legendCloseBtn" title="關閉圖例" aria-label="關閉圖例">✕</button></div>
+        <div class="legend-row"><span class="legend-swatch ls-stage"></span> 階段標題</div>
+        <div class="legend-row"><span class="legend-swatch ls-decision"></span> 決策點</div>
+        <div class="legend-row"><span class="legend-swatch ls-option"></span> 選項／分支</div>
+        <div class="legend-row"><span class="legend-swatch ls-merge"></span> 匯合點</div>
+        <div class="legend-row"><span class="legend-swatch ls-ending"></span> 結局</div>
+        <div class="legend-row"><span class="legend-swatch ls-original"></span> ★小說原作路線</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#173226;border:1.5px solid #5fd692;"></span> 判定已滿足</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#3a1c22;border:1.5px solid #ff6b76;"></span> 判定未滿足</div>
+      </div>
+      <div id="hint">左鍵拖曳畫布　滾輪縮放<br>點左側以外的節點即可累計數值；同一決策的選項會互相取代。<button type="button" class="overlay-close-btn" id="hintCloseBtn" title="關閉提示" aria-label="關閉提示">✕</button></div>
+    </div>
+
+    <div id="editorPanel">
+      <div class="fc-panel-header">
+        <h2 id="editorPanelTitle">編輯</h2>
+        <button class="fc-panel-close" id="panelCloseBtn">✕</button>
+      </div>
+      <div id="editorPanelBody"></div>
+    </div>
+  </div>
+
+  <div id="statOverlay">
+    <div id="statPanel">
+      <div class="stat-panel-head">
+        <h2>📊 隱藏數值系統（優化版）</h2>
+        <button class="fc-panel-close" id="statPanelCloseBtn">✕</button>
+      </div>
+      <div class="stat-panel-sub">全部數值初始為 50、範圍 0～100。母親／琪琪／黑貓好感度已分開；「容貌焦慮」已反向併入心理韌性；「依存度」已併入琪琪好感度（夠高即可察覺琪琪異狀）。點選畫布節點可在左側即時累計路徑效果，並自動高亮已滿足／未滿足的判定條件。</div>
+      <div id="statPanelBody"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.__NINAI_INITIAL_DATA__ = {"nodes": [{"id": "pr1", "code": "0-01", "text": "【序章：暖黃色的光】", "effect": "", "type": "stage", "original": false}, {"id": "pr7", "code": "0-02", "text": "打開母親衣櫃，拿出一件很久沒穿的碎花洋裝，套在自己還未發育完全的身體上", "effect": "自我接納+4；心理韌性+4；母親好感度-2", "type": "normal", "original": true}, {"id": "pr2", "code": "0-03", "text": "凌晨，他一個人待在只有一扇窄窗的房間裡", "effect": "白天，他是那個在超商或物流中心，穿著制服、低著頭工作的普通人", "type": "normal", "original": true}, {"id": "pr3", "code": "0-04", "text": "從很小的時候，他就隱約覺得——真正的自己，好像沒有人想要", "effect": "這種感覺，隨著年紀增長，不但沒有消失，反而越長越大", "type": "normal", "original": true}, {"id": "pr4", "code": "0-05", "text": "他還不知道，接下來的日子裡，有些人和名字會漸漸變得重要；有些選擇，會帶他走向意想不到的地方", "effect": "", "type": "normal", "original": true}, {"id": "n1", "text": "【第一階段：中學時期（回憶）】", "effect": "", "type": "stage", "original": false, "code": "1-01"}, {"id": "s1d1", "text": "更衣到一半，聽見走廊傳來腳步聲：來得及收拾嗎？", "effect": "", "type": "decision", "original": false, "code": "1-02"}, {"id": "s1d1a", "text": "手忙腳亂塞進衣櫃最深處，心臟狂跳", "effect": "心理韌性-2；曝光風險+3；解鎖【驚險擦邊】", "type": "option", "original": false, "code": "1-03"}, {"id": "s1d1b", "text": "來不及了，母親推門看見了一角碎花布料", "effect": "家庭壓力+15；母親好感度-10；心理韌性-8；自我接納-6；曝光風險+15", "type": "option", "original": true, "code": "1-04"}, {"id": "s1d1c", "text": "只是腳步聲經過，虛驚一場，但從此更小心翼翼", "effect": "心理韌性-3；自我接納-2；曝光風險+1", "type": "option", "original": false, "code": "1-05"}, {"id": "n11", "text": "鏡子前的自我對話", "effect": "", "type": "decision", "original": false, "code": "1-06"}, {"id": "n12", "text": "「我好噁心」", "effect": "自我接納-15；心理韌性-10", "type": "option", "original": true, "code": "1-07"}, {"id": "n13", "text": "「這是我的一部分」", "effect": "自我接納+15；心理韌性+5", "type": "option", "original": false, "code": "1-08"}, {"id": "n14", "text": "「可能只是好奇」", "effect": "自我接納+5；琪琪好感度-3", "type": "option", "original": false, "code": "1-09"}, {"id": "s1n2", "text": "餐桌只擺了兩副碗筷。父親的位子，已經連續空了不知道第幾個晚上", "effect": "母親從不提起父親去了哪裡，只是把多出來的那份飯，默默倒回鍋裡；家庭壓力+5", "type": "normal", "original": false, "code": "1-10"}, {"id": "n3", "text": "母親又摔碎了一個碗：如何反應？", "effect": "", "type": "decision", "original": false, "code": "1-11"}, {"id": "n4", "text": "沉默承受", "effect": "心理韌性-8；家庭壓力+8；母親好感度-5", "type": "option", "original": true, "code": "1-12"}, {"id": "n5", "text": "在日記寫下來", "effect": "心理韌性+8；自我接納+4", "type": "option", "original": false, "code": "1-13"}, {"id": "n6", "text": "躲被窩哭", "effect": "心理韌性-6；自我接納-5", "type": "option", "original": false, "code": "1-14"}, {"id": "n15", "text": "大學志願選擇", "effect": "", "type": "decision", "original": false, "code": "1-15"}, {"id": "n16", "text": "離家近私立", "effect": "家庭壓力+8；經濟壓力+5；母親好感度-3", "type": "option", "original": true, "code": "1-16"}, {"id": "n17", "text": "離家遠國立", "effect": "家庭壓力-8；經濟壓力-5；母親好感度-5；心理韌性+4", "type": "option", "original": false, "code": "1-17"}, {"id": "n18", "text": "不升學直接工作", "effect": "家庭壓力+10；經濟壓力+8；自我接納-6；母親好感度-8；心理韌性-4；跳過大學，直接面對租屋與工作", "type": "option", "original": false, "code": "1-18"}, {"id": "n19", "text": "【匯合點①】第一階段結算", "effect": "根據自我接納判定第二階段開局：<42 壓抑型／42～58 平衡型／>58 自主型", "type": "merge", "original": false, "code": "1-19"}, {"id": "n20", "text": "壓抑型", "effect": "", "type": "option", "original": true, "code": "1-20"}, {"id": "n21", "text": "平衡型", "effect": "", "type": "option", "original": false, "code": "1-21"}, {"id": "n22", "text": "自主型", "effect": "", "type": "option", "original": false, "code": "1-22"}, {"id": "cp20", "text": "拼機排行榜上，一個暱稱似曾相識的玩家——會不會是琪琪？", "effect": "琪琪好感度+6；解鎖【拼機之緣】：日後直播談起音遊時，能自然地聊上好幾句", "type": "normal", "original": false, "code": "2-01"}, {"id": "n23", "text": "【第二階段：大學時期】", "effect": "", "type": "stage", "original": false, "code": "2-02"}, {"id": "n46", "text": "不升學・直接進入社會（跳過大學）", "effect": "接下來必須面對租屋選擇與工作選擇", "type": "option", "original": false, "code": "2-03"}, {"id": "s2o14", "code": "2-04", "text": "心理韌性還剩多少？", "effect": "若心理韌性歸零（≤0），奈奈醬自殺，遊戲結束", "type": "decision", "original": false}, {"id": "s2n1", "text": "小組習作要分組：「自己找組員，五個人一組」", "effect": "全班迅速配對成群，她被分配進缺人的組別；社交連結-4；自我接納-3", "type": "normal", "original": false, "code": "2-05"}, {"id": "n51", "text": "第三階段開局②：底層勞動者型（D3路線）", "effect": "", "type": "option", "original": false, "code": "2-06"}, {"id": "s2o15", "code": "2-07", "text": "融資後的自殺", "effect": "壞結局", "type": "ending", "original": false}, {"id": "s2o16", "code": "2-08", "text": "心理韌性>0，還能想辦法撐", "effect": "此時還不能向琪琪開口。先加班或把債背到租屋之後；等人上門，並等到兩人的約定之後才可能向琪琪借錢。", "type": "option", "original": false}, {"id": "s2g0", "code": "2-09", "text": "要不要嘗試認識同組的同學？", "effect": "", "type": "decision", "original": false}, {"id": "s2o18", "code": "2-10", "text": "上更多班還債", "effect": "經濟壓力-10；心理韌性-8；家庭壓力+8", "type": "option", "original": false}, {"id": "s2o19", "code": "2-11", "text": "誰也不找，先把債背去下一階段", "effect": "經濟壓力+4；心理韌性-4", "type": "option", "original": false}, {"id": "s2g1", "code": "2-12", "text": "主動加聯絡、約一起寫作業", "effect": "心理韌性-1（鼓起勇氣會先消耗一點）", "type": "option", "original": false}, {"id": "s2g2", "code": "2-13", "text": "只在作業裡配合，下課就走", "effect": "社交連結+1；自我接納-1", "type": "option", "original": false}, {"id": "s2g3", "code": "2-14", "text": "緊張到幾乎不說話，眼神只盯著桌面", "effect": "社交連結-2；心理韌性-2", "type": "option", "original": false}, {"id": "s2g4", "code": "2-15", "text": "【隨機事件】認識同組同學的結果", "effect": "成功率：自我接納≥55且心理韌性≥52 → 65%；其中一項達標 → 35%；否則 15%。成功則社交連結上升，失敗則下降。", "type": "decision", "original": false}, {"id": "s2g5", "code": "2-16", "text": "成功交到普通朋友，有人會在群組裡@她", "effect": "社交連結+8；自我接納+3；心理韌性+2", "type": "option", "original": false}, {"id": "s2g6", "code": "2-17", "text": "被當成怪人／聊不下去，之後只剩作業訊息", "effect": "社交連結-5；自我接納-3；心理韌性-3", "type": "option", "original": false}, {"id": "cp1", "code": "2-18", "text": "接觸二次元文化的契機", "effect": "", "type": "decision", "original": false}, {"id": "cp2", "code": "2-19", "text": "被同學拉去逛漫展，第一次看見全場的cosplay", "effect": "琪琪好感度+8；自我接納+8；社交連結+5", "type": "option", "original": true}, {"id": "cp3", "code": "2-20", "text": "在社群平台刷到coser的變裝影片，深受吸引", "effect": "琪琪好感度+8；自我接納+6", "type": "option", "original": false}, {"id": "cp4", "code": "2-21", "text": "覺得那是另一個世界，沒有太在意", "effect": "琪琪好感度+0", "type": "option", "original": false}, {"id": "cp15", "text": "被同好拉去投幣式音樂遊戲機台，第一次接觸街機音游", "effect": "社交連結+6；心理韌性+4", "type": "option", "original": false, "code": "2-22"}, {"id": "cp5", "code": "2-23", "text": "是否嘗試自己下場cosplay？", "effect": "", "type": "decision", "original": false}, {"id": "cp16", "text": "是否持續留在街機廳，深入這個圈子？", "effect": "", "type": "decision", "original": false, "code": "2-24"}, {"id": "cp6", "code": "2-25-H1", "text": "鼓起勇氣，第一次女裝出門扮演喜歡的角色", "effect": "心理韌性+25；曝光風險+8；自我接納+8", "type": "option", "original": true}, {"id": "cp7", "code": "2-26-H2", "text": "先在家練習化妝與拍照，還不敢出門", "effect": "心理韌性+8；直播影響力+6", "type": "option", "original": false}, {"id": "cp8", "code": "2-27-H3", "text": "覺得太可怕，放棄這個念頭", "effect": "心理韌性-3；自我接納-4", "type": "option", "original": false}, {"id": "cp17", "text": "沉迷其中：大量課餘時間泡在機台前，結識了同樣出身破碎家庭的地雷系同好「小雨」", "effect": "社交連結+6；自我接納+3；經濟壓力+5；家庭壓力+6；曝光風險+4；心理韌性-2；解鎖【地雷系同好・小雨】", "type": "option", "original": true, "code": "2-28"}, {"id": "cp18", "text": "偶爾去打發時間，沒有深入這個圈子", "effect": "社交連結+3；經濟壓力+2", "type": "option", "original": false, "code": "2-29"}, {"id": "cp19", "text": "覺得吵鬧不適合自己，之後很少再去", "effect": "心理韌性+0", "type": "option", "original": false, "code": "2-30"}, {"id": "cp9", "code": "2-31", "text": "站在漫展的鏡子前，第一次覺得沒有人會多看自己一眼", "effect": "自我接納+5；心理韌性+4", "type": "normal", "original": true}, {"id": "cp10", "code": "2-32", "text": "一位打扮成同一部作品角色的coser主動搭話", "effect": "", "type": "decision", "original": false}, {"id": "cp11", "code": "2-33", "text": "熱情交流，互加聯絡方式", "effect": "社交連結+15；琪琪好感度+4", "type": "option", "original": true}, {"id": "cp12", "code": "2-34", "text": "禮貌回應，但保持距離", "effect": "社交連結+6", "type": "option", "original": false}, {"id": "cp13", "code": "2-35", "text": "太緊張，含糊帶過", "effect": "心理韌性-4；社交連結+2", "type": "option", "original": false}, {"id": "cp14", "code": "2-36", "text": "後來才知道，對方的帳號名稱似曾相識……原來就是琪琪", "effect": "琪琪好感度+8", "type": "normal", "original": true}, {"id": "s2n2", "text": "為了同時繳學費和租屋處的開銷，她一份工作接著一份工作地打：物流中心的大夜、飲料店的排班、補習班的電話招生，時段彼此交疊", "effect": "經濟壓力+10；心理韌性-8；社交連結-4", "type": "normal", "original": false, "code": "2-37"}, {"id": "n7", "text": "大學二年級某夜，物流中心下班後累癱在床上滑手機，無意間點進「琪琪」的直播間：是否留言？", "effect": "", "type": "decision", "original": false, "code": "2-38"}, {"id": "n8", "text": "鼓起勇氣留言", "effect": "琪琪好感度+10；解鎖【被琪琪記住】", "type": "option", "original": true, "code": "2-39"}, {"id": "n9", "text": "默默觀看", "effect": "琪琪好感度+5；心理韌性-3", "type": "option", "original": false, "code": "2-40"}, {"id": "n10", "text": "留言後刪除", "effect": "琪琪好感度+6；自我接納-5", "type": "option", "original": false, "code": "2-41"}, {"id": "s2d1", "text": "除了拚命打工，是否嘗試其他賺錢的方法？", "effect": "", "type": "decision", "original": false, "code": "2-42"}, {"id": "s2o1", "text": "聽同事說某支股票穩賺，跟著投了進去", "effect": "經濟壓力+4；心理韌性-2；解鎖【股市 Gamble】——把積蓄押進去，結果進入隨機結算", "type": "option", "original": false, "code": "2-43"}, {"id": "s2o2", "text": "接一些cosplay委託與代購，賺點外快", "effect": "經濟壓力-6；直播影響力+4；心理韌性+3；社交連結+3（需曾選 H1 出門扮演或 H2 在家練習）", "type": "option", "original": false, "code": "2-44-K2"}, {"id": "s2o3", "text": "不冒這個險，穩打穩陣只靠打工死撐（原小說路線）", "effect": "經濟壓力+10；心理韌性-6", "type": "option", "original": true, "code": "2-45"}, {"id": "s2d2", "text": "【隨機事件】投入股市後的結果（四者互斥）", "effect": "四者互斥、總和 100%：大賺 15%／小賺 25%／小賠 20%／爆倉融資 40%。連線上標有機率。", "type": "decision", "original": false, "code": "2-46"}, {"id": "s2o4", "text": "賺到一筆錢，經濟壓力大幅緩解", "effect": "經濟壓力-14；心理韌性+5；解鎖【意外之財】（大賺：15%）", "type": "option", "original": false, "code": "2-47"}, {"id": "s2o5", "text": "慘賠爆倉，帳戶幾乎歸零", "effect": "經濟壓力+14；心理韌性-10；家庭壓力+5；解鎖【融資陷阱】（爆倉：40%）", "type": "option", "original": false, "code": "2-48"}, {"id": "s2o6", "code": "2-49", "text": "小賺一筆，暫時鬆了口氣", "effect": "經濟壓力-8；心理韌性+3（小賺：25%）", "type": "option", "original": false}, {"id": "s2o7", "code": "2-50", "text": "小賠，意識到自己不適合賭這一門", "effect": "經濟壓力+5；心理韌性-4；自我接納+2（小賠：20%）", "type": "option", "original": false}, {"id": "s2o8", "code": "2-51", "text": "要不要融資借貸翻本？", "effect": "成功機率很低；失敗會讓經濟壓力與心理韌性暴跌，心理韌性歸零會直接自殺", "type": "decision", "original": false}, {"id": "s2o9", "code": "2-52-TT1", "text": "借貸翻本，想把虧掉的賺回來", "effect": "心理韌性-8；家庭壓力+4；解鎖【深淵負債】", "type": "option", "original": false}, {"id": "s2o10", "code": "2-53", "text": "不借。認賠，之後用加班慢慢填", "effect": "經濟壓力+6；心理韌性-4；家庭壓力+4", "type": "option", "original": false}, {"id": "s2o11", "code": "2-54", "text": "【隨機事件】融資翻本的結果", "effect": "成功 12%／失敗 88%。二者互斥。", "type": "decision", "original": false}, {"id": "s2o12", "code": "2-55", "text": "奇蹟翻本，把窟窿補上了", "effect": "經濟壓力-16；心理韌性-8（成功：12%）", "type": "option", "original": false}, {"id": "s2o13", "code": "2-56", "text": "翻本失敗，利息把人壓進更深的洞", "effect": "經濟壓力+18；心理韌性-22；家庭壓力+8（失敗：88%）", "type": "option", "original": false}, {"id": "s2c0", "code": "2-57", "text": "【隨機事件】輔導室塞了傳單，失眠也越來越重：要不要去心理諮商？", "effect": "去看會增加經濟壓力、當下心理韌性下降，但會解鎖【諮商】，第五階段才可能觸發「心理諮商介入」", "type": "decision", "original": false}, {"id": "s2c1", "code": "2-58", "text": "去看", "effect": "經濟壓力+6；心理韌性-4；自我接納+3；解鎖【諮商】", "type": "option", "original": false}, {"id": "s2c2", "code": "2-59", "text": "不去，把傳單塞進背包最底", "effect": "心理韌性-1", "type": "option", "original": false}, {"id": "n41", "text": "【匯合點②】第二階段結算", "effect": "互斥分割：已結識小雨→D；否則依韌性／經濟／直播走 A／B／C。A：韌性≥42且經濟<70且直播<60；B：韌性≥42且經濟<70且直播≥60；C：韌性<42或經濟≥70。見規格書 §2.2。", "type": "merge", "original": false, "code": "2-60"}, {"id": "n42", "text": "完成學業", "effect": "未結識小雨且心理韌性≥42且經濟壓力<70且直播影響力<60", "type": "option", "original": false, "code": "2-61"}, {"id": "n43", "text": "輟學直播", "effect": "未結識小雨且心理韌性≥42且經濟壓力<70且直播影響力≥60", "type": "option", "original": false, "code": "2-62"}, {"id": "n45", "text": "地雷系男", "effect": "需已結識小雨：因為小雨才開始接觸地雷系文化", "type": "option", "original": false, "code": "2-63"}, {"id": "n44", "text": "被迫休學", "effect": "未結識小雨且（心理韌性<42或經濟壓力≥70）", "type": "option", "original": false, "code": "2-64"}, {"id": "n47", "text": "第三階段開局③：社會人穩定型", "effect": "", "type": "option", "original": false, "code": "2-65"}, {"id": "n48", "text": "第三階段開局⑤：全職直播主型", "effect": "", "type": "option", "original": false, "code": "2-66"}, {"id": "n50", "text": "第三階段開局④：地雷系創作者型", "effect": "", "type": "option", "original": false, "code": "2-67"}, {"id": "n49", "text": "第三階段開局②：底層勞動者型", "effect": "", "type": "option", "original": false, "code": "2-68"}, {"id": "n52", "text": "【第三階段：畢業後／社會人時期】", "effect": "", "type": "stage", "original": false, "code": "3-01"}, {"id": "n73", "text": "深淵之路・融資失敗後的負債", "effect": "從第二階段爆倉／融資翻本失敗接續而來，不再作為第三階段獨立分支", "type": "option", "original": false, "code": "3-02"}, {"id": "xy1", "code": "3-03", "text": "小雨傳訊：「週末來我家一起拼一台能跑 OBS 的電腦？零件我有舊的。」", "effect": "", "type": "decision", "original": false}, {"id": "xy_wait", "text": "等黑貓回覆的那幾天，小雨每天都傳訊息陪你", "effect": "", "type": "decision", "original": false, "code": "3-04"}, {"id": "xy5", "code": "3-05", "text": "第三階段某夜，小雨女裝出現在超商門口，傳訊：「下班了嗎？珍奶我請。」", "effect": "若第二階段已結識小雨，此為必然發生。承認過身分則自我接納與社交連結加成更高。", "type": "decision", "original": false}, {"id": "xy1a", "code": "3-06", "text": "答應去他家拼機", "effect": "社交連結+5；自我接納+3；經濟壓力-3；心理韌性+2；解鎖【去過小雨家】", "type": "option", "original": false}, {"id": "xy1b", "code": "3-07", "text": "找理由拒絕，只在街機廳當點頭之交", "effect": "社交連結-2；心理韌性-2", "type": "option", "original": false}, {"id": "xy1c", "code": "3-08", "text": "改約網咖拼機，保持一點距離", "effect": "社交連結+4；自我接納+2；經濟壓力+2", "type": "option", "original": false}, {"id": "xy_wait1", "text": "認真回覆，也向他坦承自己現在很脆弱", "effect": "社交連結+8；自我接納+5", "type": "option", "original": false, "code": "3-09"}, {"id": "xy_wait2", "text": "有一搭沒一搭地回，心思還在黑貓身上", "effect": "社交連結+2", "type": "option", "original": false, "code": "3-10"}, {"id": "xy_wait3", "text": "幾乎不回，只想自己一個人靜一靜", "effect": "社交連結-4；心理韌性-3", "type": "option", "original": false, "code": "3-11"}, {"id": "xy5a", "code": "3-12", "text": "自己也女裝赴約，兩人第一次在深夜街道並肩走", "effect": "自我接納+6；社交連結+5；曝光風險+6；心理韌性+3", "type": "option", "original": false}, {"id": "xy5b", "code": "3-13", "text": "男裝去，但承認「鏡頭外的我也是這樣」", "effect": "自我接納+4；社交連結+4；心理韌性+2", "type": "option", "original": false}, {"id": "xy5c", "code": "3-14", "text": "已讀不回，把小雨也推遠", "effect": "社交連結-6；自我接納-4；心理韌性-3；琪琪好感度-8（小雨是琪琪的弟弟，推開他也會傷到琪琪）", "type": "option", "original": false}, {"id": "xyh0", "code": "3-15", "text": "【隨機事件】在小雨家拼機時，會不會打聽到他的家人？", "effect": "只有來他家才有機會。小雨是琪琪的弟弟。", "type": "decision", "original": false}, {"id": "xy5d", "text": "小雨提議：「要不要搬近一點？至少能互相照應。」", "effect": "", "type": "decision", "original": false, "code": "3-16"}, {"id": "xyh1", "code": "3-17", "text": "聽到了：小雨抱怨「我姐在做直播，最近一直看病，狀態很差」——原來姐姐就是琪琪，連住所也順口說了", "effect": "琪琪好感度+10；心理韌性-2；解鎖【知道琪琪的住所】；解鎖【琪琪的病情線索】；解鎖【小雨是琪琪的弟弟】", "type": "option", "original": false}, {"id": "xyh2", "code": "3-18", "text": "整晚只顧著裝機與測跑分，沒聊到家人", "effect": "社交連結+1", "type": "option", "original": false}, {"id": "xy5d1", "text": "答應，開始一起找房子", "effect": "社交連結+10；經濟壓力-4；自我接納+4；解鎖【小雨的依靠】", "type": "option", "original": false, "code": "3-19"}, {"id": "xy5d2", "text": "先不搬，但約定常常聯絡", "effect": "社交連結+5", "type": "option", "original": false, "code": "3-20"}, {"id": "xy5d3", "text": "婉拒，覺得還是保持點距離比較好", "effect": "社交連結-3；自我接納-2", "type": "option", "original": false, "code": "3-21"}, {"id": "xy2", "code": "3-22", "text": "拼到半夜，小雨把連帽外套脫下——裡面是女裝內衣的肩帶。他沒有解釋，只是看著你。", "effect": "自我接納+5；社交連結+4；解鎖【小雨也是男娘】", "type": "normal", "original": false}, {"id": "n53", "text": "租屋選擇", "effect": "", "type": "decision", "original": false, "code": "3-23"}, {"id": "xy3", "code": "3-24", "text": "小雨輕聲問：「原來你也……對吧？」", "effect": "", "type": "decision", "original": false}, {"id": "n54", "text": "頂樓加蓋套房", "effect": "經濟壓力+8；心理韌性+3（月租6500，有自己的門）", "type": "option", "original": true, "code": "3-25"}, {"id": "n55", "text": "分租雅房", "effect": "經濟壓力+4；心理韌性-6；社交連結+6；曝光風險+5（月租4500）", "type": "option", "original": false, "code": "3-26"}, {"id": "n56", "text": "回家住", "effect": "家庭壓力+20；自我接納-15；心理韌性-12；母親好感度-5；經濟壓力-10；女裝幾乎不可能", "type": "option", "original": false, "code": "3-27"}, {"id": "n57", "text": "地下室套房", "effect": "經濟壓力+6；心理韌性-10（月租5000）", "type": "option", "original": false, "code": "3-28"}, {"id": "xy3a", "code": "3-29", "text": "點頭承認。第一次對現實中的人說出這件事", "effect": "自我接納+7；社交連結+5；心理韌性+4；解鎖【現實中的同類】", "type": "option", "original": false}, {"id": "xy3b", "code": "3-30", "text": "否認、裝作沒看見，話題強制轉回顯卡", "effect": "自我接納-4；社交連結-3；心理韌性-3", "type": "option", "original": false}, {"id": "xy3c", "code": "3-31", "text": "反問：「你不怕被發現嗎？」兩人開始交換藏衣服與練聲線的方法", "effect": "自我接納+6；社交連結+5；曝光風險+3；心理韌性+3", "type": "option", "original": false}, {"id": "n53r", "code": "3-32-R0", "text": "【隨機事件】租屋之後：會不會有人找上門？", "effect": "僅在已解鎖【深淵負債】時擲骰。追債 55%／淋紅油 45%。無負債則沒人上門。有負債時即使已結識小雨，也不再走小雨珍奶線。", "type": "decision", "original": false}, {"id": "xy3d", "text": "小雨鼓起勇氣，說起自己家裡的狀況——父親很早就離開，母親改嫁後很少聯絡", "effect": "", "type": "decision", "original": false, "code": "3-33"}, {"id": "n53r1", "code": "3-34-R1", "text": "討債的人找到地址，上樓拍門、砸走廊", "effect": "家庭壓力+8；心理韌性-6；經濟壓力+4；曝光風險+6；解鎖【被人上門追債】", "type": "option", "original": false}, {"id": "n53r2", "code": "3-35-R2", "text": "大門被淋了紅油，樓下信箱塞著影印的欠條", "effect": "家庭壓力+6；心理韌性-8；經濟壓力+3；曝光風險+10；解鎖【被人上門追債】", "type": "option", "original": false}, {"id": "n53r0", "code": "3-36-R3", "text": "沒有陌生人找上門，只是房租照繳", "effect": "", "type": "option", "original": false}, {"id": "xy3d1", "text": "耐心聽完，分享自己也有類似的空缺", "effect": "社交連結+8；自我接納+5；心理韌性+3；解鎖【小雨的信任】", "type": "option", "original": false, "code": "3-37"}, {"id": "xy3d2", "text": "靜靜陪著，不多說什麼", "effect": "社交連結+4；心理韌性+2", "type": "option", "original": false, "code": "3-38"}, {"id": "xy3d3", "text": "不知道怎麼接話，尷尬地轉開話題", "effect": "社交連結-2；自我接納-2", "type": "option", "original": false, "code": "3-39"}, {"id": "n58", "text": "工作選擇", "effect": "", "type": "decision", "original": false, "code": "3-40"}, {"id": "xy4", "code": "3-41", "text": "小雨邀你下次一起去只給信得過的人的男娘私下聚會", "effect": "", "type": "decision", "original": false}, {"id": "n59", "text": "辦公室", "effect": "經濟壓力-6；心理韌性-4；社交連結+5（月薪28K、消耗中）", "type": "option", "original": false, "code": "3-42"}, {"id": "n60", "text": "超商大夜", "effect": "經濟壓力-10；心理韌性-10；社交連結-4（月薪32K、消耗高）", "type": "option", "original": true, "code": "3-43"}, {"id": "n61", "text": "物流中心", "effect": "經濟壓力-12；心理韌性-14；社交連結-6（月薪35K、極高消耗）", "type": "option", "original": false, "code": "3-44"}, {"id": "n62", "text": "餐廳外場", "effect": "經濟壓力-4；心理韌性-8；社交連結+6（月薪26K、中高消耗）", "type": "option", "original": false, "code": "3-45"}, {"id": "s3o1", "text": "會計師事務所（本科工作）", "effect": "經濟壓力-16；心理韌性-14；社交連結-2；家庭壓力-4（月薪45K、極高壓力）", "type": "option", "original": false, "code": "3-46"}, {"id": "xy4a", "code": "3-47", "text": "答應：第一次在現實裡被叫「奈奈」", "effect": "自我接納+6；社交連結+6；曝光風險+5；心理韌性+3", "type": "option", "original": false}, {"id": "xy4b", "code": "3-48", "text": "先不去，但約好之後繼續一起拼機、練聲線", "effect": "自我接納+4；社交連結+5；心理韌性+2", "type": "option", "original": false}, {"id": "xy4c", "code": "3-49", "text": "覺得太危險，只維持線上聯絡", "effect": "社交連結+2；自我接納+1；曝光風險-2", "type": "option", "original": false}, {"id": "n63", "text": "【隨機事件】同事／傳單問你：要不要去心理諮商？", "effect": "去看會增加經濟壓力、當下心理韌性會下降，但會解鎖【諮商】，才有機會觸發第五階段「心理諮商介入」翻轉", "type": "decision", "original": false, "code": "3-50"}, {"id": "n64", "text": "去，自費看諮商", "effect": "經濟壓力+8；心理韌性-5；自我接納+3；解鎖【諮商】", "type": "option", "original": false, "code": "3-51"}, {"id": "n65", "text": "只去一次，之後沒再預約", "effect": "經濟壓力+4；心理韌性-3；自我接納+1；解鎖【諮商】；解鎖【求助】", "type": "option", "original": false, "code": "3-52"}, {"id": "n66", "text": "太貴／太可怕，不去", "effect": "心理韌性-2；解鎖【自我療癒】", "type": "option", "original": true, "code": "3-53"}, {"id": "n67", "text": "母親到訪事件", "effect": "", "type": "decision", "original": false, "code": "3-54"}, {"id": "n68", "text": "開門讓她進來", "effect": "家庭壓力+12；心理韌性-8；母親好感度-6；曝光風險+12；↓若曝光風險≥70，另有 40% 觸發【衣櫃的祕密】", "type": "option", "original": false, "code": "3-55"}, {"id": "n69", "text": "假裝不在家", "effect": "家庭壓力+8；心理韌性-5；母親好感度-4", "type": "option", "original": true, "code": "3-56"}, {"id": "n70", "text": "隔門對話", "effect": "家庭壓力+10；心理韌性-6；母親好感度-3", "type": "option", "original": false, "code": "3-57"}, {"id": "s3n1", "text": "搬進只有一扇窄窗的套房後第二個月，她畫出了一張讓自己滿意的臉，開了人生第一次直播", "effect": "那天是十一月七日，琪琪生日後的第四個月；直播影響力+3；心理韌性+5", "type": "normal", "original": false, "code": "3-58"}, {"id": "n29", "text": "畢業後，是否開始經營自己的直播？直播設備怎麼選？", "effect": "", "type": "decision", "original": false, "code": "3-59"}, {"id": "n30", "text": "買全套設備", "effect": "經濟壓力+12；直播影響力+15", "type": "option", "original": true, "code": "3-60"}, {"id": "n31", "text": "只用手機直播", "effect": "經濟壓力+2；直播影響力+5", "type": "option", "original": false, "code": "3-61"}, {"id": "n32", "text": "不開直播只當琪琪觀眾", "effect": "琪琪好感度+10；直播影響力-8", "type": "option", "original": false, "code": "3-62"}, {"id": "n33", "text": "某夜直播中，琪琪私訊提出：「要不要一起連線直播？」", "effect": "", "type": "decision", "original": false, "code": "3-63"}, {"id": "n34", "text": "只出聲音", "effect": "直播影響力+8；琪琪好感度+6", "type": "option", "original": true, "code": "3-64"}, {"id": "n35", "text": "鼓起勇氣出鏡", "effect": "直播影響力+15；自我接納+10；曝光風險+12；心理韌性+6", "type": "option", "original": false, "code": "3-65"}, {"id": "n36", "text": "猶豫很久，最後還是勉強接受連線", "effect": "琪琪好感度+4；直播影響力+5；心理韌性-3；自我接納-2；解鎖【勉強連線】", "type": "option", "original": false, "code": "3-66"}, {"id": "s3n2", "text": "★兩人的約定：一起走到十萬訂閱★", "effect": "「我們一起加油，走到十萬訂閱好不好？」——這是奈奈醬這輩子第一個自己選擇的承諾", "type": "normal", "original": true, "code": "3-67"}, {"id": "s3n2a", "code": "3-68-QQ0", "text": "兩人約定之後：要不要向琪琪開口借錢、請她幫忙撐過這段？", "effect": "必須已經過【兩人的約定】。僅深淵負債可開口；需琪琪好感度≥58。開口後琪琪好感下降、經濟壓力下降。", "type": "decision", "original": false}, {"id": "s3n2y", "code": "3-69-QQ1", "text": "向琪琪開口借錢、請她幫忙撐過這段", "effect": "琪琪好感度-8；經濟壓力-16；心理韌性+4；解鎖【琪琪幫過忙】", "type": "option", "original": false}, {"id": "s3n2n", "code": "3-70-QQ2", "text": "不開口。這筆債自己扛", "effect": "心理韌性-2", "type": "option", "original": false}, {"id": "s3n2z", "code": "3-71-QQ3", "text": "沒有這筆高利債，不必向琪琪開口", "effect": "", "type": "option", "original": false}, {"id": "n80", "text": "是否還清借款？", "effect": "只看經濟壓力。≤55 視為暫可週轉／還清，回到轉帳主線；≥56 仍被債追著，進入求救判定。", "type": "decision", "original": false, "code": "3-72"}, {"id": "n81", "text": "向誰求救？", "effect": "向黑貓求救與 E-23 救贖已取消。回家（E-22）需家庭壓力≤42且母親好感度≥55。條件不足可逃跑（E-24）或回到主線。", "type": "decision", "original": false, "code": "3-73"}, {"id": "n37", "text": "搬出去獨立生活後，母親打來要求每月轉帳家用", "effect": "", "type": "decision", "original": false, "code": "3-74"}, {"id": "n82", "text": "回家", "effect": "好結局：家庭壓力夠低、母親好感夠高，她讓你回家。", "type": "ending", "original": false, "code": "3-75-E-22"}, {"id": "n84", "text": "街頭・深淵", "effect": "壞結局", "type": "ending", "original": false, "code": "3-76-E-24"}, {"id": "n38", "text": "「我知道了，以後會轉帳給妳」——答應每月自動轉帳", "effect": "家庭壓力+8；經濟壓力+10；心理韌性-8；母親好感度+5", "type": "option", "original": true, "code": "3-77"}, {"id": "n39", "text": "拒絕", "effect": "家庭壓力+18；心理韌性-10；母親好感度-15", "type": "option", "original": false, "code": "3-78"}, {"id": "n40", "text": "討價還價只轉兩千", "effect": "家庭壓力+12；經濟壓力+6；母親好感度-6", "type": "option", "original": false, "code": "3-79"}, {"id": "ex0", "code": "3-80", "text": "【隨機事件】曝光風險結算：誰有可能發現你的另一面？", "effect": "【曝光風險數值 → 機率組】四段不重疊：0～54／55～69／70～84／85～100。母親 8%／22%／45%／70%；琪琪 5%／15%／32%／55%；黑貓 3%／12%／28%／48%。三項獨立擲骰，可同時中多項；皆未中→沒被發現。", "type": "decision", "original": false}, {"id": "exMom", "code": "3-81", "text": "被母親發現（衣櫃／瀏海／瀏覽紀錄）", "effect": "家庭壓力+18；母親好感度-16；心理韌性-12；自我接納-10（隨機暴跌區間：家庭壓力+12～+22／母親好感-10～-25／韌性-8～-18／接納-6～-16）；↓高機率接【衣櫃的祕密】", "type": "option", "original": false}, {"id": "exQiqi", "code": "3-82", "text": "被琪琪對上真實身分（聲線／行程／照片）", "effect": "琪琪好感度-6；心理韌性-8；自我接納-8（隨機：琪琪好感-12～+10；約五成會說「我知道了，還是你」，五成陷入沉默）", "type": "option", "original": false}, {"id": "exCat", "code": "3-83", "text": "被黑貓對上現實中的你（超商制服／未修圖）", "effect": "黑貓好感度-10；心理韌性-10；自我接納-6（隨機：黑貓好感-18～+8；若已告白則懲罰加重）", "type": "option", "original": false}, {"id": "exSafe", "code": "3-84", "text": "這次沒有被任何人發現", "effect": "心理韌性+2；曝光風險-1（剩餘機率：三項獨立判定均未中）", "type": "option", "original": true}, {"id": "n71", "text": "是否觸發特殊路線？", "effect": "", "type": "decision", "original": false, "code": "3-85"}, {"id": "n72", "text": "平凡之路", "effect": "", "type": "option", "original": false, "code": "3-86"}, {"id": "n74", "text": "偶像之路", "effect": "地下女裝圈子逐漸成為心靈寄託：在這裡，不需要向誰解釋自己，只需要好好活著", "type": "option", "original": false, "code": "3-87"}, {"id": "n75", "text": "家庭爆發", "effect": "", "type": "option", "original": false, "code": "3-88"}, {"id": "n76", "text": "平凡之路後續判定", "effect": "", "type": "decision", "original": false, "code": "3-89"}, {"id": "ug1", "code": "3-90", "text": "在地下女裝／男娘社群裡，你選擇怎麼與同伴相處？", "effect": "", "type": "decision", "original": false}, {"id": "n88", "text": "母親反應？", "effect": "", "type": "decision", "original": false, "code": "3-91"}, {"id": "n77", "text": "辦公室頂樓", "effect": "壞結局", "type": "ending", "original": false, "code": "3-92"}, {"id": "n78", "text": "平凡中的微光", "effect": "好結局", "type": "ending", "original": false, "code": "3-93"}, {"id": "n79", "text": "遲來的接納", "effect": "隱藏結局", "type": "ending", "original": false, "code": "3-94"}, {"id": "ug2", "code": "3-95", "text": "深度參與：分享束胸、聲線訓練心得，交換保養與化妝技巧", "effect": "社交連結+15；心理韌性+12；曝光風險+12；自我接納+8", "type": "option", "original": true}, {"id": "ug3", "code": "3-96", "text": "保持距離：只默默潛水，收藏教學文卻不敢發言", "effect": "社交連結+5；心理韌性+4", "type": "option", "original": false}, {"id": "ug4", "code": "3-97", "text": "刻意隱藏：害怕被認出，只匿名觀察，不留下任何足跡", "effect": "心理韌性+6；社交連結-8；曝光風險-5", "type": "option", "original": false}, {"id": "n89", "text": "試圖理解", "effect": "隱藏結局", "type": "ending", "original": false, "code": "3-98"}, {"id": "n90", "text": "斷絕關係", "effect": "壞結局", "type": "ending", "original": false, "code": "3-99"}, {"id": "n85", "text": "地下偶像路線後續判定", "effect": "", "type": "decision", "original": false, "code": "3-100"}, {"id": "n86", "text": "舞台崩潰", "effect": "壞結局", "type": "ending", "original": false, "code": "3-101"}, {"id": "n87", "text": "真正的自己", "effect": "好結局", "type": "ending", "original": false, "code": "3-102"}, {"id": "n91", "text": "【匯合點④】第三階段末", "effect": "所有未進入結局的路線在此強制匯合，進入第四階段前統一進行狀態結算", "type": "merge", "original": false, "code": "4-01"}, {"id": "n92", "text": "【第四階段：琪琪的危機】（全路線強制匯合）", "effect": "", "type": "stage", "original": false, "code": "4-02"}, {"id": "n93", "text": "能否察覺琪琪異狀？", "effect": "", "type": "decision", "original": false, "code": "4-03"}, {"id": "n94", "text": "琪琪好感度≥72：從私訊察覺", "effect": "★察覺但可能來不及行動（小說原路線）", "type": "option", "original": true, "code": "4-04"}, {"id": "n95", "text": "琪琪好感度≥60：從直播察覺", "effect": "", "type": "option", "original": false, "code": "4-05"}, {"id": "n96", "text": "琪琪好感度<60：無法察覺", "effect": "", "type": "option", "original": false, "code": "4-06"}, {"id": "n97", "text": "察覺成功", "effect": "", "type": "normal", "original": false, "code": "4-07"}, {"id": "n98", "text": "察覺成功", "effect": "", "type": "normal", "original": false, "code": "4-08"}, {"id": "n99", "text": "察覺失敗", "effect": "", "type": "normal", "original": false, "code": "4-09"}, {"id": "s4n1", "text": "回想這陣子，琪琪的直播和留言，好像和以前有些不一樣了", "effect": "", "type": "decision", "original": false, "code": "4-10"}, {"id": "s4n2", "text": "琪琪好感度過低，她從未讓你知道自己正在看醫生——你完全沒有察覺到任何不對勁", "effect": "琪琪獨自承受一切，某天，她安靜地消失在訊息與直播裡", "type": "normal", "original": false, "code": "4-11"}, {"id": "s4o1", "text": "她唱歌的次數變少了，常常只是安靜地聊天", "effect": "琪琪好感度+4；解鎖【留意到的變化】", "type": "option", "original": false, "code": "4-12"}, {"id": "s4o2", "text": "她開始在深夜傳一些沒頭沒尾的訊息，又秒刪", "effect": "琪琪好感度+6；心理韌性-4", "type": "option", "original": false, "code": "4-13"}, {"id": "s4o3", "text": "沒有特別留意，日子照常過", "effect": "琪琪好感度-2；心理韌性-1", "type": "option", "original": false, "code": "4-14"}, {"id": "n100", "text": "琪琪最後的私訊：「我們一起努力好不好？」", "effect": "", "type": "decision", "original": false, "code": "4-15"}, {"id": "n101", "text": "「好」", "effect": "琪琪好感度+12；心理韌性+6", "type": "option", "original": true, "code": "4-16"}, {"id": "n102", "text": "追問「你是不是不開心？」", "effect": "琪琪好感度+10；解鎖【關心選項】", "type": "option", "original": false, "code": "4-17"}, {"id": "n103", "text": "已讀不回", "effect": "琪琪好感度-15；心理韌性-8", "type": "option", "original": false, "code": "4-18"}, {"id": "n104", "text": "是否進一步追問或行動？", "effect": "", "type": "decision", "original": false, "code": "4-19"}, {"id": "n105", "text": "我去找你見面好不好？", "effect": "琪琪好感度+8；心理韌性+4；解鎖【見面】", "type": "option", "original": false, "code": "4-20"}, {"id": "n106", "text": "你要不要來我家住？", "effect": "觸發【同居】邀請事件→琪琪拒絕；琪琪好感度+8；心理韌性-8", "type": "option", "original": false, "code": "4-21"}, {"id": "n107", "text": "對不起，我不知道該說什麼", "effect": "心理韌性-12；琪琪好感度-4", "type": "option", "original": true, "code": "4-22"}, {"id": "n105d", "code": "4-23", "text": "我知道你住哪，我現在過去", "effect": "琪琪好感度+10；心理韌性+6；解鎖【見面】；解鎖【及時趕到】；解鎖【知道琪琪的住所】", "type": "option", "original": false}, {"id": "n108", "text": "見面時是否揭露真實身分？", "effect": "", "type": "decision", "original": false, "code": "4-24"}, {"id": "n109", "text": "揭露", "effect": "自我接納+10；心理韌性-5；琪琪好感度+8（揭露有風險，但琪琪仍接受）", "type": "option", "original": false, "code": "4-25"}, {"id": "n110", "text": "不揭露", "effect": "琪琪好感度-12；心理韌性-10；信任破裂", "type": "option", "original": false, "code": "4-26"}, {"id": "n111", "text": "琪琪最後一次直播：是否觀看？", "effect": "", "type": "decision", "original": false, "code": "4-27"}, {"id": "n112", "text": "全程觀看並留言支持", "effect": "琪琪好感度+8；心理韌性+3", "type": "option", "original": true, "code": "4-28"}, {"id": "n113", "text": "錯過", "effect": "心理韌性-15；琪琪好感度+4", "type": "option", "original": false, "code": "4-29"}, {"id": "n114", "text": "錄下", "effect": "琪琪好感度+5；解鎖【最後影像】", "type": "option", "original": true, "code": "4-30"}, {"id": "n115", "text": "最後關頭：是否撥出語音通話？", "effect": "", "type": "decision", "original": false, "code": "4-31"}, {"id": "n116", "text": "撥出語音通話", "effect": "心理韌性+8；琪琪好感度+6；解鎖【撥出電話】", "type": "option", "original": false, "code": "4-32"}, {"id": "n117", "text": "編輯了很久的訊息沒有發出去", "effect": "心理韌性-8", "type": "option", "original": false, "code": "4-33"}, {"id": "n118", "text": "什麼都沒做", "effect": "心理韌性-12；琪琪好感度-6", "type": "option", "original": true, "code": "4-34"}, {"id": "n119", "text": "【匯合點⑤】第四階段總結算", "effect": "將①～⑤拆解為獨立判定旗標：①is_bonded=琪琪好感度≥72或社交連結≥65　②is_reached_out=(R2或S1或及時趕到住所)　③is_watched=觀看最後直播(U1或U3)　④is_resilient=心理韌性≥58　⑤is_called=撥出電話(V1)。判定優先序：先檢查『知道住所+撥出電話+琪琪好感度≥58』的及時趕到路線；否則檢查①②③④⑤是否『全部』成立；兩者皆不成立則救援失敗。", "type": "merge", "original": false, "code": "4-35"}, {"id": "n120", "text": "全部條件滿足", "effect": "琪琪獲救，被送醫治療", "type": "option", "original": false, "code": "4-36"}, {"id": "n121", "text": "任一條件未滿足", "effect": "琪琪離開", "type": "option", "original": true, "code": "4-37"}, {"id": "n120b", "code": "4-38", "text": "靠知道住所及時趕到，把琪琪從房間裡拉出來", "effect": "琪琪獲救，被送醫治療", "type": "option", "original": false}, {"id": "n122", "text": "【第五階段A：約定之路】", "effect": "", "type": "stage", "original": false, "code": "5A-01"}, {"id": "n124", "text": "琪琪住院，主角探望", "effect": "", "type": "normal", "original": false, "code": "5A-02"}, {"id": "n124a", "text": "探病期間，直播與陪伴要怎麼分配時間？", "effect": "", "type": "decision", "original": false, "code": "5A-03"}, {"id": "n124a1", "text": "先安排好直播排班，把接下來幾天空出來陪她", "effect": "心理韌性+5；琪琪好感度+8；直播影響力-5", "type": "option", "original": false, "code": "5A-04"}, {"id": "n124a2", "text": "邊直播邊探病，兩頭燒", "effect": "心理韌性-8；直播影響力+5；琪琪好感度+3", "type": "option", "original": false, "code": "5A-05"}, {"id": "n124a3", "text": "暫停直播一段時間，全心陪伴", "effect": "心理韌性+3；琪琪好感度+10；直播影響力-10；經濟壓力+5", "type": "option", "original": false, "code": "5A-06"}, {"id": "n125", "text": "以什麼身分自我介紹？", "effect": "", "type": "decision", "original": false, "code": "5A-07"}, {"id": "n126", "text": "朋友", "effect": "琪琪好感度+8", "type": "option", "original": false, "code": "5A-08"}, {"id": "n127", "text": "奈奈醬", "effect": "琪琪好感度+4；自我接納+6；曝光風險+8", "type": "option", "original": false, "code": "5A-09"}, {"id": "n128", "text": "不進去", "effect": "心理韌性-8；琪琪好感度-5", "type": "option", "original": false, "code": "5A-10"}, {"id": "n129", "text": "琪琪提議：你繼續直播好不好？", "effect": "", "type": "decision", "original": false, "code": "5A-11"}, {"id": "n130", "text": "好，繼續", "effect": "琪琪好感度+10；心理韌性+8；直播影響力+8", "type": "option", "original": false, "code": "5A-12"}, {"id": "n131", "text": "沒你不行", "effect": "琪琪好感度+12；心理韌性-8", "type": "option", "original": false, "code": "5A-13"}, {"id": "n132", "text": "一起退出", "effect": "琪琪好感度-8；自我接納+10；心理韌性+5", "type": "option", "original": false, "code": "5A-14"}, {"id": "n134", "text": "主角獨自直播，琪琪病床觀看", "effect": "", "type": "normal", "original": false, "code": "5A-15"}, {"id": "n133", "text": "重新開始", "effect": "好結局", "type": "ending", "original": false, "code": "5A-16"}, {"id": "n134a", "text": "直播空檔，黑貓傳訊關心近況", "effect": "", "type": "decision", "original": false, "code": "5A-17"}, {"id": "n134a1", "text": "認真回覆，聊了很久", "effect": "黑貓好感度+10；心理韌性+3", "type": "option", "original": false, "code": "5A-18"}, {"id": "n134a2", "text": "簡短回覆，說最近很忙", "effect": "黑貓好感度+2", "type": "option", "original": false, "code": "5A-19"}, {"id": "n134a3", "text": "沒空回，已讀不回", "effect": "黑貓好感度-6；心理韌性-2", "type": "option", "original": false, "code": "5A-20"}, {"id": "n135", "text": "直播成長判定", "effect": "", "type": "decision", "original": false, "code": "5A-21"}, {"id": "n135b", "text": "是否再做一次衝刺，努力衝向十萬訂閱？", "effect": "", "type": "decision", "original": false, "code": "5A-22"}, {"id": "n135b1", "text": "加開特別企劃直播，通宵拼一波", "effect": "直播影響力+15；心理韌性-5", "type": "option", "original": false, "code": "5A-23"}, {"id": "n135b2", "text": "在鏡頭前，第一次向觀眾提起「琪琪」與這個約定", "effect": "直播影響力+20；琪琪好感度+5；自我接納+5；曝光風險+5", "type": "option", "original": false, "code": "5A-24"}, {"id": "n135b3", "text": "維持原本步調，順其自然，不勉強衝刺", "effect": "直播影響力+5；心理韌性+3", "type": "option", "original": false, "code": "5A-25"}, {"id": "n135c", "text": "延長衝刺後的結算", "effect": "", "type": "merge", "original": false, "code": "5A-26"}, {"id": "n136", "text": "接近十萬訂閱", "effect": "", "type": "normal", "original": false, "code": "5A-27"}, {"id": "n137", "text": "約定難產", "effect": "壞結局", "type": "ending", "original": false, "code": "5A-28"}, {"id": "n138", "text": "★訂閱數突破十萬★", "effect": "約定完成的那一刻", "type": "normal", "original": true, "code": "5A-29"}, {"id": "n138a", "text": "訂閱突破十萬那晚，母親傳來一則訊息", "effect": "", "type": "decision", "original": false, "code": "5A-30"}, {"id": "n138a1", "text": "母親罕見地說「恭喜」，還問「妳最近過得好嗎」", "effect": "母親好感度+12；心理韌性+5", "type": "option", "original": false, "code": "5A-31"}, {"id": "n138a2", "text": "母親只回「知道了，記得按時轉帳」", "effect": "母親好感度-2", "type": "option", "original": false, "code": "5A-32"}, {"id": "n138a3", "text": "已讀不回，一如既往", "effect": "母親好感度-4；心理韌性-2", "type": "option", "original": false, "code": "5A-33"}, {"id": "n139", "text": "突破十萬訂閱後的選擇", "effect": "", "type": "decision", "original": false, "code": "5A-34"}, {"id": "n140", "text": "約定達成", "effect": "好結局", "type": "ending", "original": false, "code": "5A-35"}, {"id": "n141", "text": "兩人的約定", "effect": "好結局", "type": "ending", "original": false, "code": "5A-36"}, {"id": "n142", "text": "空洞", "effect": "壞結局", "type": "ending", "original": false, "code": "5A-37"}, {"id": "n123", "text": "【第五階段B：影子之路】", "effect": "", "type": "stage", "original": true, "code": "5B-01"}, {"id": "s5xy0", "code": "5B-02", "text": "黑貓拒絕之後，小雨傳訊：「姐姐不在了。你……還有我在。」", "effect": "琪琪死後，琪琪好感度視為對小雨的感情。需已結識小雨。", "type": "decision", "original": false}, {"id": "n143", "text": "黑貓開始頻繁互動", "effect": "", "type": "normal", "original": false, "code": "5B-03"}, {"id": "s5xyY", "code": "5B-04", "text": "答應和小雨在一起。以後一起女裝去機廳和漫展", "effect": "自我接納+12；社交連結+10；琪琪好感度+6（此後視為對小雨）", "type": "option", "original": false}, {"id": "s5xyN", "code": "5B-05", "text": "沒辦法回應。連小雨的手也握不住", "effect": "社交連結-4；自我接納-4；心理韌性-4", "type": "option", "original": false}, {"id": "s5n1", "text": "黑貓傳來今天發生的瑣事，問你今天過得如何？", "effect": "", "type": "decision", "original": false, "code": "5B-06"}, {"id": "s5xyEnd", "code": "5B-07", "text": "機廳與漫展的兩個人", "effect": "隱藏結局", "type": "ending", "original": false}, {"id": "s5o1", "text": "認真回覆，分享自己今天的小事", "effect": "黑貓好感度+8；社交連結+5", "type": "option", "original": true, "code": "5B-08"}, {"id": "s5o2", "text": "簡短敷衍幾句", "effect": "黑貓好感度+2", "type": "option", "original": false, "code": "5B-09"}, {"id": "s5o3", "text": "已讀不回", "effect": "黑貓好感度-6；社交連結-3", "type": "option", "original": false, "code": "5B-10"}, {"id": "s5n2", "text": "黑貓第一次主動聊起自己的心事：原生家庭也不太好過", "effect": "", "type": "decision", "original": false, "code": "5B-11"}, {"id": "s5o4", "text": "耐心傾聽，分享自己類似的感受", "effect": "黑貓好感度+10；社交連結+6；解鎖【彼此碎掉的形狀】", "type": "option", "original": true, "code": "5B-12"}, {"id": "s5o5", "text": "安慰幾句，沒有深聊", "effect": "黑貓好感度+4", "type": "option", "original": false, "code": "5B-13"}, {"id": "s5o6", "text": "刻意轉移話題，不想靠得太近", "effect": "黑貓好感度-4；心理韌性+2", "type": "option", "original": false, "code": "5B-14"}, {"id": "s5n3", "text": "黑貓約你聊到很晚，捨不得掛斷：要不要繼續聊下去？", "effect": "", "type": "decision", "original": false, "code": "5B-15"}, {"id": "s5o7", "text": "繼續聊到天快亮", "effect": "黑貓好感度+10；心理韌性-3；社交連結+5", "type": "option", "original": true, "code": "5B-16"}, {"id": "s5o8", "text": "找個理由先去睡", "effect": "黑貓好感度+2；心理韌性+3", "type": "option", "original": false, "code": "5B-17"}, {"id": "n144", "text": "如何回應黑貓？", "effect": "", "type": "decision", "original": false, "code": "5B-18"}, {"id": "n145", "text": "溫柔", "effect": "黑貓好感度+12；社交連結+8", "type": "option", "original": true, "code": "5B-19"}, {"id": "n146", "text": "保持距離", "effect": "黑貓好感度+5；社交連結+4", "type": "option", "original": false, "code": "5B-20"}, {"id": "n147", "text": "冷淡", "effect": "黑貓好感度-8；社交連結-6；心理韌性-5", "type": "option", "original": false, "code": "5B-21"}, {"id": "n148", "text": "黑貓告白：我喜歡你", "effect": "", "type": "decision", "original": false, "code": "5B-22"}, {"id": "n149", "text": "對不起，需要時間", "effect": "黑貓好感度+4；心理韌性-6", "type": "option", "original": true, "code": "5B-23"}, {"id": "n150", "text": "坦白真相", "effect": "黑貓好感度+6；自我接納+8；心理韌性+4", "type": "option", "original": false, "code": "5B-24"}, {"id": "n151", "text": "不接不拒", "effect": "黑貓好感度-4；心理韌性-5；拖延，後續需選擇", "type": "option", "original": false, "code": "5B-25"}, {"id": "n154", "text": "拖延後選擇", "effect": "", "type": "decision", "original": false, "code": "5B-26"}, {"id": "n152", "text": "自殺線（小說原路線）", "effect": "主角寫遺書、安排直播排程", "type": "normal", "original": true, "code": "5B-27"}, {"id": "n153", "text": "黑貓反應判定", "effect": "", "type": "decision", "original": false, "code": "5B-28"}, {"id": "n161", "text": "是否有翻轉條件觸發？", "effect": "", "type": "decision", "original": false, "code": "5B-29"}, {"id": "n155", "text": "完全接受", "effect": "自我接納+20；心理韌性+20；黑貓好感度+15", "type": "option", "original": false, "code": "5B-30"}, {"id": "n156", "text": "困惑但願意嘗試", "effect": "自我接納+8；心理韌性+6；黑貓好感度+8；進入磨合期", "type": "option", "original": false, "code": "5B-31"}, {"id": "n162", "text": "翻轉條件：黑貓關鍵話語", "effect": "需社交連結≥70且黑貓好感度≥72", "type": "option", "original": false, "code": "5B-32"}, {"id": "n163", "text": "翻轉條件：同事關心", "effect": "需第三階段建立關係（社交連結≥62，或曾深入職場／社群）", "type": "option", "original": false, "code": "5B-33"}, {"id": "n164", "text": "翻轉條件：心理諮商介入", "effect": "需第二或第三階段進行過諮商（解鎖【諮商】）", "type": "option", "original": false, "code": "5B-34"}, {"id": "n165", "text": "翻轉條件：母親主動示弱", "effect": "需家庭壓力≤42且母親好感度≥55", "type": "option", "original": false, "code": "5B-35"}, {"id": "n160", "text": "【第六階段：黑貓篇】（非小說路線）", "effect": "僅在影子之路＋黑貓坦白成功＋主角存活時觸發", "type": "stage", "original": false, "code": "5B-36"}, {"id": "n166", "text": "任一條件觸發", "effect": "主角被救下，進入重生線", "type": "option", "original": false, "code": "5B-37"}, {"id": "n167", "text": "無條件觸發", "effect": "主角自殺，進入死亡後番外篇", "type": "option", "original": true, "code": "5B-38"}, {"id": "n194", "text": "主角決定向黑貓坦白", "effect": "", "type": "normal", "original": false, "code": "5B-39"}, {"id": "n170", "text": "★主角死亡", "effect": "防火巷的撞擊聲，凌晨四點零三分", "type": "normal", "original": true, "code": "5B-40"}, {"id": "n195", "text": "選擇坦白方式", "effect": "", "type": "decision", "original": false, "code": "5B-41"}, {"id": "n196", "text": "當面坦白", "effect": "黑貓好感度+10；自我接納+8", "type": "option", "original": false, "code": "5B-42"}, {"id": "n197", "text": "語音通話", "effect": "黑貓好感度+6；自我接納+5", "type": "option", "original": false, "code": "5B-43"}, {"id": "n198", "text": "文字訊息", "effect": "黑貓好感度-4；心理韌性-5", "type": "option", "original": false, "code": "5B-44"}, {"id": "n199", "text": "黑貓的真實反應", "effect": "", "type": "decision", "original": false, "code": "5B-45"}, {"id": "n200", "text": "完全接受", "effect": "自我接納+18；心理韌性+16；黑貓好感度+14", "type": "option", "original": false, "code": "5B-46"}, {"id": "n201", "text": "困惑但願意嘗試", "effect": "自我接納+8；心理韌性+6；黑貓好感度+8", "type": "option", "original": false, "code": "5B-47"}, {"id": "n202", "text": "無法接受", "effect": "", "type": "decision", "original": false, "code": "5B-48"}, {"id": "n206", "text": "主角與黑貓建立真實關係", "effect": "自我接納+8；黑貓好感度+8；直播影響力-6；不再依賴奈奈醬身分", "type": "normal", "original": false, "code": "5B-49"}, {"id": "n157", "text": "孤獨", "effect": "壞結局", "type": "ending", "original": false, "code": "5B-50"}, {"id": "n159", "text": "回歸黑暗", "effect": "壞結局", "type": "ending", "original": false, "code": "5B-51"}, {"id": "n207", "text": "結局判定（黑貓篇）", "effect": "依自我接納與社交連結的優先序判定最終結局，確保任何數值組合都有明確出路，不會卡關。", "type": "decision", "original": false, "code": "5B-52"}, {"id": "n210", "text": "我終於是我", "effect": "好結局", "type": "ending", "original": false, "code": "5B-53"}, {"id": "n211", "text": "真實的愛", "effect": "好結局", "type": "ending", "original": false, "code": "5B-54"}, {"id": "n212", "text": "磨合", "effect": "好結局", "type": "ending", "original": false, "code": "5B-55"}, {"id": "n213", "text": "未痊癒的關係", "effect": "壞結局", "type": "ending", "original": false, "code": "5B-56"}, {"id": "ep1", "code": "EP-01", "text": "★死訊傳開前的回音", "effect": "留言區瘋狂刷屏「奈奈醬還在嗎」，已讀標記始終沒有亮起；三天後房東因異味報警", "type": "normal", "original": true}, {"id": "ep2", "code": "EP-02", "text": "警察打開衣櫃，看見掛得整整齊齊的女裝，和用淺藍色髮帶綁著的隨身碟", "effect": "沒有人在上面寫名字", "type": "normal", "original": true}, {"id": "ep3", "code": "EP-03", "text": "一週後，訂閱數卡在八萬七千——永遠到不了十萬", "effect": "黑貓仍每天傳訊息，從道歉漸漸變成日常分享", "type": "normal", "original": true}, {"id": "ep4", "code": "EP-04", "text": "半年後，黑貓最後一條訊息：「我交女朋友了……但我還是會想起你」", "effect": "已讀標記，始終沒有亮起", "type": "normal", "original": true}, {"id": "ep5", "code": "EP-05", "text": "奈奈醬離開後第三個月，母親發現戶頭再也沒收到那五千塊轉帳", "effect": "撥打號碼，已暫停使用", "type": "normal", "original": true}, {"id": "ep6", "code": "EP-06", "text": "打電話給房東，得知孩子三個月前已經離開了", "effect": "她握著手機，看著流理台上一個沒洗的碗", "type": "normal", "original": true}, {"id": "ep7", "code": "EP-07", "text": "母親蹲在廚房，看著自己又摔碎的一個碗，發現自己在發抖", "effect": "那個十六歲就懷在她肚子裡的孩子，走了", "type": "normal", "original": true}, {"id": "ep8", "code": "EP-08", "text": "（插敘）十六歲那年意外懷孕的母親，一輩子都在等一場報恩", "effect": "她不知道怎麼愛一個和想像中完全不一樣的小孩", "type": "normal", "original": true}, {"id": "ep9", "code": "EP-09", "text": "（插敘）孩子從那天起不再頂嘴，只是安靜地在小鏡子前偷偷練習化妝", "effect": "母親不知道，那正是他開始成為奈奈醬的起點", "type": "normal", "original": true}, {"id": "ep10", "code": "EP-10", "text": "（插敘）奈奈醬與黑貓，其實從留言裡就認出了彼此碎掉的形狀", "effect": "「我不在乎你是誰，我在乎的是那個在凌晨回我訊息的人」", "type": "normal", "original": true}, {"id": "ep11", "code": "EP-11", "text": "警局，母親打開紙箱，看見那封信：「這輩子欠妳的，我下輩子再還」", "effect": "那些字，早已被自己的眼淚模糊了", "type": "normal", "original": true}, {"id": "ep12", "code": "EP-12", "text": "母親抱著紙箱蹲在超商門口，對著虛無崩潰痛哭：「你從來沒有欠我……」", "effect": "「只要你回來就好……」", "type": "normal", "original": true}, {"id": "ep13", "code": "EP-13", "text": "三年後，黑貓收到律師事務所轉交的包裹——那條褪色的淺藍緞帶", "effect": "資料夾名稱是「好好活著的理由」", "type": "normal", "original": true}, {"id": "ep14", "code": "EP-14", "text": "四張截圖，一段錄音。黑貓點開，聽見奈奈醬從未展示過的真實聲音", "effect": "「黑貓。如果你聽到這個檔案……」", "type": "normal", "original": true}, {"id": "ep15", "code": "EP-15", "text": "那晚，黑貓夢見奈奈醬卸下濾鏡與變聲器，說她已經找到了琪琪", "effect": "「我現在不會痛了。她把我碎掉的地方，一個一個黏回去了」", "type": "normal", "original": true}, {"id": "ep16", "code": "EP-16", "text": "黑貓醒來，開了自己的直播間——不再是奈奈醬，只是她自己", "effect": "只有一盞暖黃色檯燈，她說話，不再唱歌", "type": "normal", "original": true}, {"id": "ep17", "code": "EP-17", "text": "好好活著的理由（真結局・番外篇）", "effect": "原小說結局", "type": "ending", "original": true}], "edges": [{"id": "e3", "from": "n3", "to": "n4", "label": ""}, {"id": "e4", "from": "n3", "to": "n5", "label": ""}, {"id": "e5", "from": "n3", "to": "n6", "label": ""}, {"id": "e15", "from": "n11", "to": "n12", "label": ""}, {"id": "e16", "from": "n11", "to": "n13", "label": ""}, {"id": "e17", "from": "n11", "to": "n14", "label": ""}, {"id": "e21", "from": "n15", "to": "n16", "label": ""}, {"id": "e22", "from": "n15", "to": "n17", "label": ""}, {"id": "e23", "from": "n15", "to": "n18", "label": ""}, {"id": "e24", "from": "n16", "to": "n19", "label": ""}, {"id": "e25", "from": "n17", "to": "n19", "label": ""}, {"id": "e26", "from": "n19", "to": "n20", "label": "自我接納<42"}, {"id": "e27", "from": "n19", "to": "n21", "label": "自我接納42～58"}, {"id": "e28", "from": "n19", "to": "n22", "label": "自我接納>58"}, {"id": "e29", "from": "n20", "to": "n23", "label": ""}, {"id": "e30", "from": "n21", "to": "n23", "label": ""}, {"id": "e31", "from": "n22", "to": "n23", "label": ""}, {"id": "e38", "from": "n29", "to": "n30", "label": ""}, {"id": "e39", "from": "n29", "to": "n31", "label": ""}, {"id": "e40", "from": "n31", "to": "n32", "label": ""}, {"id": "e43", "from": "n30", "to": "n33", "label": ""}, {"id": "e44", "from": "n32", "to": "n33", "label": ""}, {"id": "e45", "from": "n33", "to": "n34", "label": ""}, {"id": "e46", "from": "n33", "to": "n35", "label": ""}, {"id": "e47", "from": "n33", "to": "n36", "label": ""}, {"id": "e51", "from": "n37", "to": "n38", "label": ""}, {"id": "e52", "from": "n37", "to": "n39", "label": ""}, {"id": "e53", "from": "n37", "to": "n40", "label": ""}, {"id": "e58", "from": "n41", "to": "n42", "label": "未結識小雨且心理韌性≥42且經濟壓力<70且直播影響力<60"}, {"id": "e59", "from": "n41", "to": "n43", "label": "未結識小雨且心理韌性≥42且經濟壓力<70且直播影響力≥60"}, {"id": "e60", "from": "n41", "to": "n44", "label": "未結識小雨且心理韌性<42"}, {"id": "e61", "from": "n41", "to": "n45", "label": "已結識小雨"}, {"id": "e62", "from": "n18", "to": "n46", "label": "不升學：跳過大學"}, {"id": "e63", "from": "n42", "to": "n47", "label": ""}, {"id": "e64", "from": "n43", "to": "n48", "label": ""}, {"id": "e65", "from": "n44", "to": "n49", "label": ""}, {"id": "e66", "from": "n45", "to": "n50", "label": ""}, {"id": "e67", "from": "n46", "to": "n51", "label": "進入社會人開局"}, {"id": "e68", "from": "n47", "to": "n52", "label": ""}, {"id": "e69", "from": "n48", "to": "n52", "label": ""}, {"id": "e70", "from": "n49", "to": "n52", "label": ""}, {"id": "e71", "from": "n50", "to": "n52", "label": ""}, {"id": "e72", "from": "n51", "to": "n52", "label": ""}, {"id": "e73", "from": "n52", "to": "n53", "label": "未結識小雨且無深淵負債"}, {"id": "e74", "from": "n53", "to": "n54", "label": ""}, {"id": "e75", "from": "n53", "to": "n55", "label": ""}, {"id": "e76", "from": "n53", "to": "n56", "label": ""}, {"id": "e77", "from": "n53", "to": "n57", "label": ""}, {"id": "e79", "from": "n58", "to": "n59", "label": ""}, {"id": "e80", "from": "n58", "to": "n60", "label": ""}, {"id": "e81", "from": "n58", "to": "n61", "label": ""}, {"id": "e82", "from": "n58", "to": "n62", "label": ""}, {"id": "e84", "from": "n63", "to": "n64", "label": ""}, {"id": "e85", "from": "n63", "to": "n65", "label": ""}, {"id": "e86", "from": "n63", "to": "n66", "label": ""}, {"id": "e87", "from": "n54", "to": "n53r", "label": ""}, {"id": "e88", "from": "n55", "to": "n53r", "label": ""}, {"id": "e89", "from": "n56", "to": "n53r", "label": ""}, {"id": "e90", "from": "n57", "to": "n53r", "label": ""}, {"id": "e91", "from": "n59", "to": "n63", "label": ""}, {"id": "e92", "from": "n60", "to": "n63", "label": ""}, {"id": "e93", "from": "n61", "to": "n63", "label": ""}, {"id": "e94", "from": "n62", "to": "n63", "label": ""}, {"id": "e95", "from": "n64", "to": "n67", "label": ""}, {"id": "e96", "from": "n65", "to": "n67", "label": ""}, {"id": "e97", "from": "n66", "to": "n67", "label": ""}, {"id": "e98", "from": "n67", "to": "n68", "label": ""}, {"id": "e99", "from": "n67", "to": "n69", "label": ""}, {"id": "e100", "from": "n67", "to": "n70", "label": ""}, {"id": "e104", "from": "n71", "to": "n72", "label": "放棄女裝"}, {"id": "e106", "from": "n71", "to": "n74", "label": "地下偶像"}, {"id": "e107", "from": "n71", "to": "n75", "label": "衣櫃的祕密"}, {"id": "e108", "from": "n68", "to": "n75", "label": "開門且曝光風險≥70\n另 40% 觸發衣櫃的祕密"}, {"id": "e109", "from": "n72", "to": "n76", "label": ""}, {"id": "e110", "from": "n76", "to": "n77", "label": "黑貓線未開啟且心理韌性<38"}, {"id": "e111", "from": "n76", "to": "n78", "label": "黑貓線未開啟且心理韌性≥58"}, {"id": "e112", "from": "n76", "to": "n79", "label": "黑貓線已開啟"}, {"id": "e114", "from": "n80", "to": "n81", "label": "經濟壓力≥56　尚未還清"}, {"id": "e115", "from": "n80", "to": "n37", "label": "經濟壓力≤55　還清／暫可週轉"}, {"id": "e116", "from": "n81", "to": "n82", "label": "向母親　家庭壓力≤42且母親好感度≥55"}, {"id": "e118", "from": "n81", "to": "n84", "label": "逃跑／不求助（保底）"}, {"id": "e120", "from": "n85", "to": "n86", "label": "心理韌性<38"}, {"id": "e121", "from": "n85", "to": "n87", "label": "心理韌性≥38且自我接納≥68"}, {"id": "e122", "from": "n75", "to": "n88", "label": ""}, {"id": "e123", "from": "n88", "to": "n89", "label": "Yes"}, {"id": "e124", "from": "n88", "to": "n90", "label": "No"}, {"id": "e125", "from": "n76", "to": "n91", "label": "黑貓線未開啟且心理韌性38～57（保底：回到主線繼續）"}, {"id": "e126", "from": "n81", "to": "n91", "label": "先不結束，回到主線（保底）"}, {"id": "e127", "from": "n85", "to": "n91", "label": "心理韌性≥38且自我接納<68（保底：回到主線繼續）"}, {"id": "e128", "from": "n88", "to": "n91", "label": ""}, {"id": "e130", "from": "n91", "to": "n92", "label": ""}, {"id": "e131", "from": "n92", "to": "n93", "label": ""}, {"id": "e132", "from": "n93", "to": "n94", "label": "琪琪好感度≥72"}, {"id": "e133", "from": "n93", "to": "n95", "label": "琪琪好感度60～71"}, {"id": "e134", "from": "n93", "to": "n96", "label": "琪琪好感度<60"}, {"id": "e135", "from": "n94", "to": "n97", "label": ""}, {"id": "e136", "from": "n95", "to": "n98", "label": ""}, {"id": "e137", "from": "n96", "to": "n99", "label": ""}, {"id": "e141", "from": "n100", "to": "n101", "label": ""}, {"id": "e142", "from": "n100", "to": "n102", "label": ""}, {"id": "e143", "from": "n100", "to": "n103", "label": ""}, {"id": "e144", "from": "n101", "to": "n104", "label": ""}, {"id": "e145", "from": "n102", "to": "n104", "label": ""}, {"id": "e146", "from": "n103", "to": "n104", "label": ""}, {"id": "e147", "from": "n104", "to": "n105", "label": ""}, {"id": "e148", "from": "n104", "to": "n106", "label": ""}, {"id": "e149", "from": "n104", "to": "n107", "label": ""}, {"id": "e150", "from": "n105", "to": "n108", "label": ""}, {"id": "e151", "from": "n108", "to": "n109", "label": ""}, {"id": "e152", "from": "n108", "to": "n110", "label": ""}, {"id": "e153", "from": "n109", "to": "n111", "label": ""}, {"id": "e154", "from": "n110", "to": "n111", "label": ""}, {"id": "e155", "from": "n106", "to": "n111", "label": ""}, {"id": "e156", "from": "n107", "to": "n111", "label": ""}, {"id": "e157", "from": "n111", "to": "n112", "label": ""}, {"id": "e158", "from": "n111", "to": "n113", "label": ""}, {"id": "e159", "from": "n111", "to": "n114", "label": ""}, {"id": "e160", "from": "n112", "to": "n115", "label": ""}, {"id": "e161", "from": "n113", "to": "n115", "label": ""}, {"id": "e162", "from": "n114", "to": "n115", "label": ""}, {"id": "e163", "from": "n115", "to": "n116", "label": ""}, {"id": "e164", "from": "n115", "to": "n117", "label": ""}, {"id": "e165", "from": "n115", "to": "n118", "label": ""}, {"id": "e166", "from": "n116", "to": "n119", "label": ""}, {"id": "e167", "from": "n117", "to": "n119", "label": ""}, {"id": "e168", "from": "n118", "to": "n119", "label": ""}, {"id": "e169", "from": "n119", "to": "n120", "label": "①②③④⑤五項全部成立（且非及時趕到路線）"}, {"id": "e170", "from": "n119", "to": "n121", "label": "非及時趕到路線，且①②③④⑤未全部成立"}, {"id": "e171", "from": "n120", "to": "n122", "label": ""}, {"id": "e172", "from": "n121", "to": "n123", "label": ""}, {"id": "e173", "from": "n122", "to": "n124", "label": ""}, {"id": "e175", "from": "n125", "to": "n126", "label": ""}, {"id": "e176", "from": "n125", "to": "n127", "label": ""}, {"id": "e177", "from": "n125", "to": "n128", "label": ""}, {"id": "e178", "from": "n126", "to": "n129", "label": ""}, {"id": "e179", "from": "n127", "to": "n129", "label": ""}, {"id": "e180", "from": "n128", "to": "n129", "label": ""}, {"id": "e181", "from": "n129", "to": "n130", "label": ""}, {"id": "e182", "from": "n129", "to": "n131", "label": ""}, {"id": "e183", "from": "n129", "to": "n132", "label": ""}, {"id": "e184", "from": "n132", "to": "n133", "label": ""}, {"id": "e185", "from": "n130", "to": "n134", "label": ""}, {"id": "e186", "from": "n131", "to": "n134", "label": ""}, {"id": "e190", "from": "n136", "to": "n138", "label": ""}, {"id": "e192", "from": "n139", "to": "n140", "label": "在直播中說出琪琪的名字"}, {"id": "e193", "from": "n139", "to": "n141", "label": "下播後打給琪琪"}, {"id": "e194", "from": "n139", "to": "n142", "label": "完成後突然失去目標"}, {"id": "e195", "from": "n123", "to": "n143", "label": ""}, {"id": "e197", "from": "n144", "to": "n145", "label": ""}, {"id": "e198", "from": "n144", "to": "n146", "label": ""}, {"id": "e199", "from": "n144", "to": "n147", "label": ""}, {"id": "e200", "from": "n145", "to": "n148", "label": ""}, {"id": "e201", "from": "n146", "to": "n148", "label": ""}, {"id": "e202", "from": "n147", "to": "n148", "label": ""}, {"id": "e203", "from": "n148", "to": "n149", "label": ""}, {"id": "e204", "from": "n148", "to": "n150", "label": ""}, {"id": "e205", "from": "n148", "to": "n151", "label": ""}, {"id": "e206", "from": "n149", "to": "n152", "label": "★走向自殺線"}, {"id": "e207", "from": "n150", "to": "n153", "label": "進入黑貓反應判定"}, {"id": "e208", "from": "n151", "to": "n154", "label": ""}, {"id": "e209", "from": "n154", "to": "n152", "label": "若選擇逃避→走向自殺線"}, {"id": "e210", "from": "n154", "to": "n153", "label": "若選擇坦白→進入黑貓反應判定"}, {"id": "e211", "from": "n153", "to": "n155", "label": "黑貓好感度≥70且社交連結≥68且當面/語音"}, {"id": "e212", "from": "n153", "to": "n156", "label": "黑貓好感度55～69或社交連結52～67"}, {"id": "e216", "from": "n155", "to": "n160", "label": ""}, {"id": "e217", "from": "n156", "to": "n160", "label": ""}, {"id": "e218", "from": "n152", "to": "n161", "label": ""}, {"id": "e219", "from": "n161", "to": "n162", "label": ""}, {"id": "e220", "from": "n161", "to": "n163", "label": ""}, {"id": "e221", "from": "n161", "to": "n164", "label": ""}, {"id": "e222", "from": "n161", "to": "n165", "label": ""}, {"id": "e223", "from": "n162", "to": "n166", "label": ""}, {"id": "e224", "from": "n162", "to": "n167", "label": ""}, {"id": "e225", "from": "n163", "to": "n166", "label": ""}, {"id": "e226", "from": "n163", "to": "n167", "label": ""}, {"id": "e227", "from": "n164", "to": "n166", "label": ""}, {"id": "e228", "from": "n164", "to": "n167", "label": ""}, {"id": "e229", "from": "n165", "to": "n166", "label": ""}, {"id": "e230", "from": "n165", "to": "n167", "label": ""}, {"id": "e233", "from": "n167", "to": "n170", "label": ""}, {"id": "e258", "from": "n160", "to": "n194", "label": ""}, {"id": "e259", "from": "n194", "to": "n195", "label": ""}, {"id": "e260", "from": "n195", "to": "n196", "label": ""}, {"id": "e261", "from": "n195", "to": "n197", "label": ""}, {"id": "e262", "from": "n195", "to": "n198", "label": ""}, {"id": "e263", "from": "n196", "to": "n199", "label": ""}, {"id": "e264", "from": "n197", "to": "n199", "label": ""}, {"id": "e265", "from": "n198", "to": "n199", "label": ""}, {"id": "e266", "from": "n199", "to": "n200", "label": "黑貓好感度≥70且社交連結≥68且當面/語音"}, {"id": "e267", "from": "n199", "to": "n201", "label": "黑貓好感度55～69或社交連結52～67"}, {"id": "e272", "from": "n200", "to": "n206", "label": ""}, {"id": "e273", "from": "n201", "to": "n206", "label": ""}, {"id": "e274", "from": "n206", "to": "n207", "label": ""}, {"id": "e280", "from": "pr1", "to": "pr2", "label": ""}, {"id": "e281", "from": "pr2", "to": "pr3", "label": ""}, {"id": "e282", "from": "pr3", "to": "pr4", "label": ""}, {"id": "e286", "from": "n1", "to": "pr7", "label": ""}, {"id": "e294", "from": "n74", "to": "ug1", "label": ""}, {"id": "e295", "from": "ug1", "to": "ug2", "label": ""}, {"id": "e296", "from": "ug2", "to": "n85", "label": ""}, {"id": "e297", "from": "ug1", "to": "ug3", "label": ""}, {"id": "e298", "from": "ug3", "to": "n85", "label": ""}, {"id": "e299", "from": "ug1", "to": "ug4", "label": ""}, {"id": "e300", "from": "ug4", "to": "n85", "label": ""}, {"id": "e302", "from": "cp1", "to": "cp2", "label": ""}, {"id": "e303", "from": "cp1", "to": "cp3", "label": ""}, {"id": "e304", "from": "cp1", "to": "cp4", "label": ""}, {"id": "e305", "from": "cp2", "to": "cp5", "label": ""}, {"id": "e306", "from": "cp3", "to": "cp5", "label": ""}, {"id": "e307", "from": "cp4", "to": "s2n2", "label": ""}, {"id": "e308", "from": "cp5", "to": "cp6", "label": ""}, {"id": "e309", "from": "cp5", "to": "cp7", "label": ""}, {"id": "e310", "from": "cp5", "to": "cp8", "label": ""}, {"id": "e311", "from": "cp7", "to": "s2n2", "label": ""}, {"id": "e312", "from": "cp8", "to": "s2n2", "label": ""}, {"id": "e313", "from": "cp6", "to": "cp9", "label": ""}, {"id": "e314", "from": "cp9", "to": "cp10", "label": ""}, {"id": "e315", "from": "cp10", "to": "cp11", "label": ""}, {"id": "e316", "from": "cp10", "to": "cp12", "label": ""}, {"id": "e317", "from": "cp10", "to": "cp13", "label": ""}, {"id": "e318", "from": "cp12", "to": "s2n2", "label": ""}, {"id": "e319", "from": "cp13", "to": "s2n2", "label": ""}, {"id": "e320", "from": "cp11", "to": "cp14", "label": ""}, {"id": "e321", "from": "cp14", "to": "s2n2", "label": ""}, {"id": "e322", "from": "n170", "to": "ep1", "label": ""}, {"id": "e323", "from": "ep1", "to": "ep2", "label": ""}, {"id": "e324", "from": "ep2", "to": "ep3", "label": ""}, {"id": "e325", "from": "ep3", "to": "ep4", "label": ""}, {"id": "e326", "from": "ep4", "to": "ep5", "label": ""}, {"id": "e327", "from": "ep5", "to": "ep6", "label": ""}, {"id": "e328", "from": "ep6", "to": "ep7", "label": ""}, {"id": "e329", "from": "ep7", "to": "ep8", "label": ""}, {"id": "e330", "from": "ep8", "to": "ep9", "label": ""}, {"id": "e331", "from": "ep9", "to": "ep10", "label": ""}, {"id": "e332", "from": "ep10", "to": "ep11", "label": ""}, {"id": "e333", "from": "ep11", "to": "ep12", "label": ""}, {"id": "e334", "from": "ep12", "to": "ep13", "label": ""}, {"id": "e335", "from": "ep13", "to": "ep14", "label": ""}, {"id": "e336", "from": "ep14", "to": "ep15", "label": ""}, {"id": "e337", "from": "ep15", "to": "ep16", "label": ""}, {"id": "e338", "from": "ep16", "to": "ep17", "label": ""}, {"id": "e900", "from": "pr4", "to": "n1", "label": ""}, {"id": "e901", "from": "pr7", "to": "s1d1", "label": ""}, {"id": "e902", "from": "s1d1", "to": "s1d1a", "label": ""}, {"id": "e903", "from": "s1d1", "to": "s1d1b", "label": ""}, {"id": "e904", "from": "s1d1", "to": "s1d1c", "label": ""}, {"id": "e905", "from": "s1d1a", "to": "n11", "label": ""}, {"id": "e906", "from": "s1d1b", "to": "n11", "label": ""}, {"id": "e907", "from": "s1d1c", "to": "n11", "label": ""}, {"id": "e908", "from": "n12", "to": "s1n2", "label": ""}, {"id": "e909", "from": "n13", "to": "s1n2", "label": ""}, {"id": "e910", "from": "n14", "to": "s1n2", "label": ""}, {"id": "e911", "from": "s1n2", "to": "n3", "label": ""}, {"id": "e912", "from": "n4", "to": "n15", "label": ""}, {"id": "e913", "from": "n5", "to": "n15", "label": ""}, {"id": "e914", "from": "n6", "to": "n15", "label": ""}, {"id": "e915", "from": "n23", "to": "s2n1", "label": ""}, {"id": "e916", "from": "s2n1", "to": "s2g0", "label": ""}, {"id": "e917", "from": "cp1", "to": "cp15", "label": ""}, {"id": "e918", "from": "cp15", "to": "cp16", "label": ""}, {"id": "e919", "from": "cp16", "to": "cp17", "label": ""}, {"id": "e920", "from": "cp16", "to": "cp18", "label": ""}, {"id": "e921", "from": "cp16", "to": "cp19", "label": ""}, {"id": "e923", "from": "cp20", "to": "s2n2", "label": ""}, {"id": "e924", "from": "cp18", "to": "s2n2", "label": ""}, {"id": "e925", "from": "cp19", "to": "s2n2", "label": ""}, {"id": "e928", "from": "s2d1", "to": "s2o1", "label": ""}, {"id": "e929", "from": "s2d1", "to": "s2o2", "label": "需曾嘗試過cosplay（H1／H2）"}, {"id": "e930", "from": "s2d1", "to": "s2o3", "label": ""}, {"id": "e931", "from": "s2o2", "to": "s2c0", "label": ""}, {"id": "e932", "from": "s2o3", "to": "s2c0", "label": ""}, {"id": "e933", "from": "s2o1", "to": "s2d2", "label": ""}, {"id": "e934", "from": "s2d2", "to": "s2o4", "label": "大賺　15%"}, {"id": "e935", "from": "s2d2", "to": "s2o5", "label": "爆倉融資　40%"}, {"id": "e936", "from": "s2o4", "to": "s2c0", "label": ""}, {"id": "e938", "from": "s2n2", "to": "n7", "label": ""}, {"id": "e939", "from": "n8", "to": "s2d1", "label": ""}, {"id": "e940", "from": "n9", "to": "s2d1", "label": ""}, {"id": "e941", "from": "n10", "to": "s2d1", "label": ""}, {"id": "e942", "from": "n68", "to": "s3n1", "label": ""}, {"id": "e943", "from": "n69", "to": "s3n1", "label": ""}, {"id": "e944", "from": "n70", "to": "s3n1", "label": ""}, {"id": "e945", "from": "s3n1", "to": "n29", "label": ""}, {"id": "e946", "from": "n34", "to": "s3n2", "label": ""}, {"id": "e947", "from": "n35", "to": "s3n2", "label": ""}, {"id": "e948", "from": "n36", "to": "s3n2", "label": ""}, {"id": "e949", "from": "s3n2", "to": "s3n2a", "label": ""}, {"id": "e953", "from": "n58", "to": "s3o1", "label": "需大學學業成績優異（第二階段未輟學／未被迫休學）"}, {"id": "e954", "from": "s3o1", "to": "n63", "label": ""}, {"id": "e955", "from": "n97", "to": "s4n1", "label": ""}, {"id": "e956", "from": "n98", "to": "s4n1", "label": ""}, {"id": "e957", "from": "s4n1", "to": "s4o1", "label": ""}, {"id": "e958", "from": "s4n1", "to": "s4o2", "label": ""}, {"id": "e959", "from": "s4n1", "to": "s4o3", "label": ""}, {"id": "e960", "from": "s4o1", "to": "n100", "label": ""}, {"id": "e961", "from": "s4o2", "to": "n100", "label": ""}, {"id": "e962", "from": "s4o3", "to": "n100", "label": ""}, {"id": "e963", "from": "n99", "to": "s4n2", "label": ""}, {"id": "e964", "from": "s4n2", "to": "n121", "label": "察覺失敗：無法阻止悲劇"}, {"id": "e965", "from": "n143", "to": "s5n1", "label": ""}, {"id": "e966", "from": "s5n1", "to": "s5o1", "label": ""}, {"id": "e967", "from": "s5n1", "to": "s5o2", "label": ""}, {"id": "e968", "from": "s5n1", "to": "s5o3", "label": ""}, {"id": "e969", "from": "s5o1", "to": "s5n2", "label": ""}, {"id": "e970", "from": "s5o2", "to": "s5n2", "label": ""}, {"id": "e971", "from": "s5o3", "to": "s5n2", "label": ""}, {"id": "e972", "from": "s5n2", "to": "s5o4", "label": ""}, {"id": "e973", "from": "s5n2", "to": "s5o5", "label": ""}, {"id": "e974", "from": "s5n2", "to": "s5o6", "label": ""}, {"id": "e975", "from": "s5o4", "to": "s5n3", "label": ""}, {"id": "e976", "from": "s5o5", "to": "s5n3", "label": ""}, {"id": "e977", "from": "s5o6", "to": "s5n3", "label": ""}, {"id": "e978", "from": "s5n3", "to": "s5o7", "label": ""}, {"id": "e979", "from": "s5n3", "to": "s5o8", "label": ""}, {"id": "e980", "from": "s5o7", "to": "n144", "label": ""}, {"id": "e981", "from": "s5o8", "to": "n144", "label": ""}, {"id": "e982", "from": "n7", "to": "n8", "label": ""}, {"id": "e983", "from": "n7", "to": "n9", "label": ""}, {"id": "e984", "from": "n7", "to": "n10", "label": ""}, {"id": "e1101", "from": "s2d2", "to": "s2o6", "label": "小賺　25%"}, {"id": "e1102", "from": "s2d2", "to": "s2o7", "label": "小賠　20%"}, {"id": "e1103", "from": "s2o6", "to": "s2c0", "label": ""}, {"id": "e1104", "from": "s2o7", "to": "s2c0", "label": ""}, {"id": "e1110", "from": "cp17", "to": "xy1", "label": ""}, {"id": "e1111", "from": "xy1", "to": "xy1a", "label": ""}, {"id": "e1112", "from": "xy1", "to": "xy1b", "label": ""}, {"id": "e1113", "from": "xy1", "to": "xy1c", "label": ""}, {"id": "e1114", "from": "xy1a", "to": "xyh0", "label": ""}, {"id": "e1115", "from": "xy1c", "to": "xy2", "label": ""}, {"id": "e1116", "from": "xy1b", "to": "cp20", "label": "保持距離，錯過坦白"}, {"id": "e1117", "from": "xy2", "to": "xy3", "label": ""}, {"id": "e1118", "from": "xy3", "to": "xy3a", "label": ""}, {"id": "e1119", "from": "xy3", "to": "xy3b", "label": ""}, {"id": "e1120", "from": "xy3", "to": "xy3c", "label": ""}, {"id": "e1123", "from": "xy3b", "to": "cp20", "label": "否認後關係停在街機廳"}, {"id": "e1124", "from": "xy4", "to": "xy4a", "label": ""}, {"id": "e1125", "from": "xy4", "to": "xy4b", "label": ""}, {"id": "e1126", "from": "xy4", "to": "xy4c", "label": ""}, {"id": "e1127", "from": "xy4a", "to": "cp20", "label": ""}, {"id": "e1128", "from": "xy4b", "to": "cp20", "label": ""}, {"id": "e1129", "from": "xy4c", "to": "cp20", "label": ""}, {"id": "e1130", "from": "n52", "to": "xy5", "label": "已結識小雨且無深淵負債"}, {"id": "e1131", "from": "xy5", "to": "xy5a", "label": ""}, {"id": "e1132", "from": "xy5", "to": "xy5b", "label": ""}, {"id": "e1133", "from": "xy5", "to": "xy5c", "label": ""}, {"id": "e1140", "from": "n38", "to": "ex0", "label": ""}, {"id": "e1141", "from": "n39", "to": "ex0", "label": ""}, {"id": "e1142", "from": "n40", "to": "ex0", "label": ""}, {"id": "e1143", "from": "ex0", "to": "exMom", "label": "母親發現　0～54：8%／55～69：22%／70～84：45%／85～100：70%"}, {"id": "e1144", "from": "ex0", "to": "exQiqi", "label": "琪琪發現　0～54：5%／55～69：15%／70～84：32%／85～100：55%"}, {"id": "e1145", "from": "ex0", "to": "exCat", "label": "黑貓發現　0～54：3%／55～69：12%／70～84：28%／85～100：48%"}, {"id": "e1146", "from": "ex0", "to": "exSafe", "label": "沒被發現　三項獨立均未中（剩餘機率）"}, {"id": "e1147", "from": "exMom", "to": "n71", "label": "隨後進入特殊路線判定"}, {"id": "e1148", "from": "exQiqi", "to": "n71", "label": ""}, {"id": "e1149", "from": "exCat", "to": "n71", "label": ""}, {"id": "e1150", "from": "exSafe", "to": "n71", "label": ""}, {"id": "e1151", "from": "exMom", "to": "n75", "label": "曝光風險≥70\n額外 40% 觸發衣櫃的祕密"}, {"id": "e1202", "from": "s2g0", "to": "s2g1", "label": ""}, {"id": "e1203", "from": "s2g0", "to": "s2g2", "label": ""}, {"id": "e1204", "from": "s2g0", "to": "s2g3", "label": ""}, {"id": "e1205", "from": "s2g1", "to": "s2g4", "label": ""}, {"id": "e1206", "from": "s2g4", "to": "s2g5", "label": "成功（自我接納與心理韌性越高越容易）"}, {"id": "e1207", "from": "s2g4", "to": "s2g6", "label": "失敗（其餘機率）"}, {"id": "e1208", "from": "s2g5", "to": "cp1", "label": ""}, {"id": "e1209", "from": "s2g6", "to": "cp1", "label": ""}, {"id": "e1210", "from": "s2g2", "to": "cp1", "label": ""}, {"id": "e1211", "from": "s2g3", "to": "cp1", "label": ""}, {"id": "e1212", "from": "s2o5", "to": "s2o8", "label": ""}, {"id": "e1213", "from": "s2o8", "to": "s2o9", "label": "借貸翻本　心理韌性再扣；成功率很低"}, {"id": "e1214", "from": "s2o8", "to": "s2o10", "label": "不借，認賠加班"}, {"id": "e1215", "from": "s2o9", "to": "s2o11", "label": ""}, {"id": "e1216", "from": "s2o11", "to": "s2o12", "label": "翻本成功　12%"}, {"id": "e1217", "from": "s2o11", "to": "s2o13", "label": "翻本失敗　88%"}, {"id": "e1218", "from": "s2o12", "to": "s2c0", "label": ""}, {"id": "e1219", "from": "s2o10", "to": "s2c0", "label": ""}, {"id": "e1220", "from": "s2o13", "to": "n73", "label": "接上深淵之路"}, {"id": "e1221", "from": "n73", "to": "s2o14", "label": ""}, {"id": "e1222", "from": "s2o14", "to": "s2o15", "label": "心理韌性≤0　自殺，遊戲結束"}, {"id": "e1223", "from": "s2o14", "to": "s2o16", "label": "心理韌性>0"}, {"id": "e1225", "from": "s2o16", "to": "s2o18", "label": ""}, {"id": "e1226", "from": "s2o16", "to": "s2o19", "label": ""}, {"id": "e1228", "from": "s2o18", "to": "s2c0", "label": ""}, {"id": "e1229", "from": "s2o19", "to": "s2c0", "label": ""}, {"id": "e1230", "from": "s2c0", "to": "s2c1", "label": ""}, {"id": "e1231", "from": "s2c0", "to": "s2c2", "label": ""}, {"id": "e1232", "from": "s2c1", "to": "n41", "label": ""}, {"id": "e1233", "from": "s2c2", "to": "n41", "label": ""}, {"id": "e1234", "from": "xyh0", "to": "xyh1", "label": "打聽到琪琪　40%"}, {"id": "e1235", "from": "xyh0", "to": "xyh2", "label": "沒聊到家人　60%"}, {"id": "e1236", "from": "xyh1", "to": "xy2", "label": ""}, {"id": "e1237", "from": "xyh2", "to": "xy2", "label": ""}, {"id": "e1238", "from": "n104", "to": "n105d", "label": "需解鎖【知道琪琪的住所】"}, {"id": "e1239", "from": "n105d", "to": "n108", "label": ""}, {"id": "e1240", "from": "n119", "to": "n120b", "label": "知道琪琪的住所且撥出電話(V1)且琪琪好感度≥58（及時趕到，優先於五項判定）"}, {"id": "e1241", "from": "n120b", "to": "n122", "label": ""}, {"id": "e1243", "from": "s5xy0", "to": "s5xyY", "label": "琪琪好感度≥52（視為對小雨的感情）"}, {"id": "e1244", "from": "s5xy0", "to": "s5xyN", "label": ""}, {"id": "e1245", "from": "s5xyY", "to": "s5xyEnd", "label": ""}, {"id": "e1246", "from": "s5xyN", "to": "n157", "label": ""}, {"id": "e9001", "from": "n135", "to": "n136", "label": "直播影響力≥78"}, {"id": "e9002", "from": "n135", "to": "n137", "label": "直播影響力<48"}, {"id": "e9003", "from": "n135", "to": "n135b", "label": "直播影響力48～77（尚未達標，還有機會）"}, {"id": "e9004", "from": "n135b", "to": "n135b1", "label": ""}, {"id": "e9005", "from": "n135b", "to": "n135b2", "label": ""}, {"id": "e9006", "from": "n135b", "to": "n135b3", "label": ""}, {"id": "e9007", "from": "n135b1", "to": "n135c", "label": ""}, {"id": "e9008", "from": "n135b2", "to": "n135c", "label": ""}, {"id": "e9009", "from": "n135b3", "to": "n135c", "label": ""}, {"id": "e9010", "from": "n135c", "to": "n136", "label": "延長判定後直播影響力≥78"}, {"id": "e9011", "from": "n135c", "to": "n137", "label": "延長判定後直播影響力<78（保底：不會卡關，直接進入約定難產結局）"}, {"id": "e9012", "from": "n153", "to": "n157", "label": "(黑貓好感度<55或社交連結<52或文字坦白)且心理韌性≥32"}, {"id": "e9013", "from": "n153", "to": "n159", "label": "(黑貓好感度<55或社交連結<52或文字坦白)且心理韌性<32"}, {"id": "e9014", "from": "n199", "to": "n202", "label": "黑貓好感度<55或社交連結<52或文字坦白"}, {"id": "e9015", "from": "n202", "to": "n157", "label": "未結識小雨且心理韌性≥32（併入孤獨・E-09）"}, {"id": "e9016", "from": "n202", "to": "n159", "label": "未結識小雨且心理韌性<32（併入回歸黑暗・E-10）"}, {"id": "e9017", "from": "n166", "to": "n133", "label": ""}, {"id": "e9018", "from": "n166", "to": "n79", "label": ""}, {"id": "e9019", "from": "n207", "to": "n210", "label": "自我接納≥78"}, {"id": "e9020", "from": "n207", "to": "n211", "label": "自我接納58～77"}, {"id": "e9021", "from": "n207", "to": "n212", "label": "自我接納<58且社交連結≥72"}, {"id": "e9022", "from": "n207", "to": "n213", "label": "自我接納<58且社交連結<72（保底）"}, {"id": "e9023", "from": "n124", "to": "n124a", "label": ""}, {"id": "e9024", "from": "n124a", "to": "n124a1", "label": ""}, {"id": "e9025", "from": "n124a", "to": "n124a2", "label": ""}, {"id": "e9026", "from": "n124a", "to": "n124a3", "label": ""}, {"id": "e9027", "from": "n124a1", "to": "n125", "label": ""}, {"id": "e9028", "from": "n124a2", "to": "n125", "label": ""}, {"id": "e9029", "from": "n124a3", "to": "n125", "label": ""}, {"id": "e9030", "from": "n134", "to": "n134a", "label": ""}, {"id": "e9031", "from": "n134a", "to": "n134a1", "label": ""}, {"id": "e9032", "from": "n134a", "to": "n134a2", "label": ""}, {"id": "e9033", "from": "n134a", "to": "n134a3", "label": ""}, {"id": "e9034", "from": "n134a1", "to": "n135", "label": ""}, {"id": "e9035", "from": "n134a2", "to": "n135", "label": ""}, {"id": "e9036", "from": "n134a3", "to": "n135", "label": ""}, {"id": "e9037", "from": "n138", "to": "n138a", "label": ""}, {"id": "e9038", "from": "n138a", "to": "n138a1", "label": ""}, {"id": "e9039", "from": "n138a", "to": "n138a2", "label": ""}, {"id": "e9040", "from": "n138a", "to": "n138a3", "label": ""}, {"id": "e9041", "from": "n138a1", "to": "n139", "label": ""}, {"id": "e9042", "from": "n138a2", "to": "n139", "label": ""}, {"id": "e9043", "from": "n138a3", "to": "n139", "label": ""}, {"id": "e9044", "from": "xy3a", "to": "xy3d", "label": ""}, {"id": "e9045", "from": "xy3c", "to": "xy3d", "label": ""}, {"id": "e9046", "from": "xy3d", "to": "xy3d1", "label": ""}, {"id": "e9047", "from": "xy3d", "to": "xy3d2", "label": ""}, {"id": "e9048", "from": "xy3d", "to": "xy3d3", "label": ""}, {"id": "e9049", "from": "xy3d1", "to": "xy4", "label": ""}, {"id": "e9050", "from": "xy3d2", "to": "xy4", "label": ""}, {"id": "e9051", "from": "xy3d3", "to": "xy4", "label": ""}, {"id": "e9052", "from": "xy5a", "to": "xy5d", "label": ""}, {"id": "e9053", "from": "xy5b", "to": "xy5d", "label": ""}, {"id": "e9054", "from": "xy5c", "to": "xy5d", "label": ""}, {"id": "e9055", "from": "xy5d", "to": "xy5d1", "label": ""}, {"id": "e9056", "from": "xy5d", "to": "xy5d2", "label": ""}, {"id": "e9057", "from": "xy5d", "to": "xy5d3", "label": ""}, {"id": "e9058", "from": "xy5d1", "to": "n53", "label": ""}, {"id": "e9059", "from": "xy5d2", "to": "n53", "label": ""}, {"id": "e9060", "from": "xy5d3", "to": "n53", "label": ""}, {"id": "e9061", "from": "n202", "to": "xy_wait", "label": "需已結識小雨"}, {"id": "e9062", "from": "xy_wait", "to": "xy_wait1", "label": ""}, {"id": "e9063", "from": "xy_wait", "to": "xy_wait2", "label": ""}, {"id": "e9064", "from": "xy_wait", "to": "xy_wait3", "label": ""}, {"id": "e9065", "from": "xy_wait1", "to": "s5xy0", "label": ""}, {"id": "e9066", "from": "xy_wait2", "to": "s5xy0", "label": ""}, {"id": "e9067", "from": "xy_wait3", "to": "s5xy0", "label": ""}, {"id": "e1301", "from": "n52", "to": "n53", "label": "有深淵負債（不走小雨珍奶）"}, {"id": "e1302", "from": "n53r", "to": "n53r1", "label": "有深淵負債　上門追債　55%"}, {"id": "e1303", "from": "n53r", "to": "n53r2", "label": "有深淵負債　淋紅油　45%"}, {"id": "e1304", "from": "n53r", "to": "n53r0", "label": "無深淵負債"}, {"id": "e1305", "from": "n53r1", "to": "n58", "label": ""}, {"id": "e1306", "from": "n53r2", "to": "n58", "label": ""}, {"id": "e1307", "from": "n53r0", "to": "n58", "label": ""}, {"id": "e1308", "from": "s3n2a", "to": "s3n2y", "label": "有深淵負債且琪琪好感度≥58"}, {"id": "e1309", "from": "s3n2a", "to": "s3n2n", "label": "有深淵負債"}, {"id": "e1310", "from": "s3n2a", "to": "s3n2z", "label": "無深淵負債"}, {"id": "e1311", "from": "s3n2y", "to": "n80", "label": ""}, {"id": "e1312", "from": "s3n2n", "to": "n80", "label": ""}, {"id": "e1313", "from": "s3n2z", "to": "n37", "label": ""}, {"id": "e60b", "from": "n41", "to": "n44", "label": "未結識小雨且經濟壓力≥70"}]};
+</script>
+<script>
+// ==================== 奈奈醬的約定 — 互動式劇情流程圖編輯器 ====================
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "ninai_flowchart_state_v6";
+  var NODE_W = 244;
+  var NODE_MIN_H = 78;
+  var LEVEL_GAP_Y = 248;
+  var COL_GAP_X = 280;
+  var LANE_GAP_X = 88;
+
+  var TYPE_META = {
+    stage:    { label: "階段標題", cls: "type-stage" },
+    decision: { label: "決策點",   cls: "type-decision" },
+    option:   { label: "選項／分支", cls: "type-option" },
+    merge:    { label: "匯合點",   cls: "type-merge" },
+    ending:   { label: "結局",     cls: "type-ending" },
+    normal:   { label: "一般",     cls: "type-normal" }
+  };
+
+  // ---------------------------------------------------------------------
+  // 隱藏數值系統（統一整理版）
+  // 說明：原始劇本中同一個概念常有多種寫法（例如「韌性／韌」「接納／接」
+  // 「連結／連／歸屬感／孤獨感」……），已全部歸併為以下 10 項通用數值，
+  // 並套用到全部節點的「效果說明」與連線條件文字上，全劇情階段共用同一套定義。
+  // aliases 僅供對照原始寫法之用，不影響資料本身（資料已全部轉為 canonical 名稱）。
+  // ---------------------------------------------------------------------
+  var STAT_DEFINITIONS = [
+    { id: "心理韌性", category: "內在心理", range: "0～100（初始 50）", higherBetter: true,
+      desc: "面對壓力、挫折與傷害時的心理耐受力。已將「容貌焦慮」反向併入：容貌焦慮下降會轉成心理韌性上升（例如第一次女裝出門「容貌焦慮-15；心理韌性+10」→「心理韌性+25」）。過低容易觸發壞結局／回歸黑暗。",
+      aliases: ["韌性", "韌", "勇氣", "安全感", "容貌焦慮（反向）"] },
+    { id: "自我接納", category: "內在心理", range: "0～100（初始 50）", higherBetter: true,
+      desc: "對「真實自我／女裝身分」的接納程度，影響第一階段開局型態與後期多個結局判定。",
+      aliases: ["接納", "接"] },
+    { id: "琪琪好感度", category: "人際與依附", range: "0～100（初始 50）", higherBetter: true,
+      desc: "與琪琪的情感連結深度。已將「依存度」併入；數值夠高才能察覺琪琪異狀，也是阻止琪琪的關鍵判定之一。",
+      aliases: ["依存度", "依存", "依", "好感度（琪琪）", "二次元好感"] },
+    { id: "黑貓好感度", category: "人際與依附", range: "0～100（初始 50）", higherBetter: true,
+      desc: "與黑貓之間的信任與情感深度，影響告白後的接受度、求救與自殺線翻轉條件。",
+      aliases: ["好感度（黑貓）"] },
+    { id: "母親好感度", category: "人際與依附", range: "0～100（初始 50）", higherBetter: true,
+      desc: "與母親之間殘存的情感連結。即使家庭壓力高，仍可能因轉帳、隔門對話而維持一絲連結。",
+      aliases: ["好感度（母親）", "母"] },
+    { id: "社交連結", category: "人際與依附", range: "0～100（初始 50）", higherBetter: true,
+      desc: "與現實／同好社群中他人建立的連結強度。孤獨感為此數值的反向表現。",
+      aliases: ["連結", "連", "歸屬感", "孤獨感（反向）"] },
+    { id: "家庭壓力", category: "現實壓力", range: "0～100（初始 50，越低越好）", higherBetter: false,
+      desc: "原生家庭帶來的壓力與束縛感。過高會限制居住與自我表達；足夠低才可能觸發母親主動示弱。",
+      aliases: ["家庭"] },
+    { id: "經濟壓力", category: "現實壓力", range: "0～100（初始 50，越低越好）", higherBetter: false,
+      desc: "收支與生活成本帶來的財務壓力，由職業、租屋、設備等選擇累積。",
+      aliases: ["經濟"] },
+    { id: "曝光風險", category: "外顯風險", range: "0～100（初始 50，越低越隱密）", higherBetter: false,
+      desc: "身分被發現的風險（0～100）。隨機曝光依四段對照：0～54／55～69／70～84／85～100。母親 8／22／45／70%；琪琪 5／15／32／55%；黑貓 3／12／28／48%。三項獨立擲骰。完整表見條件判定規格書 §3.1。",
+      aliases: ["曝露"] },
+    { id: "直播影響力", category: "外顯風險", range: "0～100（初始 50）", higherBetter: true,
+      desc: "直播事業的成長與觀眾影響力，決定訂閱數成長速度與相關結局分支。",
+      aliases: ["直播", "成長", "技巧"] }
+  ];
+  var STAT_NAME_LIST = STAT_DEFINITIONS.map(function (s) { return s.id; });
+
+  var state = { nodes: [], edges: [] };
+  var undoStack = [];
+  var redoStack = [];
+  var selection = { kind: null, id: null };
+  var connectMode = false;
+  var connectFrom = null;
+  var zoom = 1;
+  var panX = 60;
+  var panY = 40;
+  var dirty = false;
+  var dragging = null; // {id, offsetX, offsetY, moved}
+  var panning = null;
+  var highlightEdgeIds = new Set(); // 目前應在畫布上亮起的連線 id（點選結局節點時計算）
+
+  var els = {};
+
+  function $(sel) { return document.querySelector(sel); }
+  function $all(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+  function uid(prefix) {
+    return prefix + Math.random().toString(36).slice(2, 9);
+  }
+  function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+  // ---------------------------------------------------------------------
+  // 初始化 / 儲存 / 載入
+  // ---------------------------------------------------------------------
+  function init() {
+    cacheEls();
+    bindToolbar();
+    bindStatPanel();
+    bindPathPanel();
+    bindPathPanelResizer();
+    bindOverlayCloseButtons();
+    bindCanvasEvents();
+    bindKeyboard();
+    loadInitial();
+  }
+
+  // ---------------------------------------------------------------------
+  // 左側「即時累計」面板：拖曳縮放寬度
+  // ---------------------------------------------------------------------
+  function bindPathPanelResizer() {
+    var panel = document.getElementById("pathPanel");
+    var handle = document.getElementById("pathPanelResizer");
+    if (!panel || !handle) return;
+
+    var MIN_W = 180;
+    var MAX_W = 640;
+
+    var saved = null;
+    try { saved = parseInt(localStorage.getItem("fc_pathPanelWidth"), 10); } catch (e) {}
+    if (saved && !isNaN(saved)) {
+      saved = Math.max(MIN_W, Math.min(MAX_W, saved));
+      panel.style.width = saved + "px";
+      panel.style.flexBasis = saved + "px";
+    }
+
+    var dragging = false;
+    var startX = 0;
+    var startW = 0;
+
+    handle.addEventListener("mousedown", function (e) {
+      dragging = true;
+      startX = e.clientX;
+      startW = panel.getBoundingClientRect().width;
+      handle.classList.add("is-dragging");
+      document.body.classList.add("is-resizing-pathpanel");
+      e.preventDefault();
+    });
+
+    window.addEventListener("mousemove", function (e) {
+      if (!dragging) return;
+      var w = startW + (e.clientX - startX);
+      w = Math.max(MIN_W, Math.min(MAX_W, w));
+      panel.style.width = w + "px";
+      panel.style.flexBasis = w + "px";
+    });
+
+    window.addEventListener("mouseup", function () {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove("is-dragging");
+      document.body.classList.remove("is-resizing-pathpanel");
+      try {
+        localStorage.setItem("fc_pathPanelWidth", String(Math.round(panel.getBoundingClientRect().width)));
+      } catch (e) {}
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // 圖例／提示浮動框：可按 X 關閉（記住關閉狀態）
+  // ---------------------------------------------------------------------
+  function bindOverlayCloseButtons() {
+    var legend = document.getElementById("legend");
+    var hint = document.getElementById("hint");
+    var legendBtn = document.getElementById("legendCloseBtn");
+    var hintBtn = document.getElementById("hintCloseBtn");
+
+    var legendClosed = false, hintClosed = false;
+    try { legendClosed = localStorage.getItem("fc_legendClosed") === "1"; } catch (e) {}
+    try { hintClosed = localStorage.getItem("fc_hintClosed") === "1"; } catch (e) {}
+    if (legendClosed && legend) legend.classList.add("is-closed");
+    if (hintClosed && hint) hint.classList.add("is-closed");
+
+    if (legendBtn) {
+      legendBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (legend) legend.classList.add("is-closed");
+        try { localStorage.setItem("fc_legendClosed", "1"); } catch (err) {}
+      });
+    }
+    if (hintBtn) {
+      hintBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (hint) hint.classList.add("is-closed");
+        try { localStorage.setItem("fc_hintClosed", "1"); } catch (err) {}
+      });
+    }
+  }
+
+  function cacheEls() {
+    els.world = $("#world");
+    els.svg = $("#edgeSvg");
+    els.viewport = $("#viewport");
+    els.panel = $("#editorPanel");
+    els.panelBody = $("#editorPanelBody");
+    els.panelTitle = $("#editorPanelTitle");
+    els.statusText = $("#statusText");
+    els.countText = $("#countText");
+    els.searchInput = $("#searchInput");
+    els.searchResults = $("#searchResults");
+    els.importInput = $("#importInput");
+  }
+
+  function normalizeState(s) {
+    (s.nodes || []).forEach(function (n) {
+      if (typeof n.code !== "string") n.code = "";
+    });
+    return s;
+  }
+
+  function loadInitial() {
+    tryLoadFromStorage(function (loaded) {
+      if (loaded && loaded.nodes && loaded.nodes.length) {
+        state = normalizeState(loaded);
+        setStatus("已從本機瀏覽器載入上次儲存的進度");
+      } else {
+        state = normalizeState(clone(window.__NINAI_INITIAL_DATA__));
+        autoLayout(state);
+        setStatus("已載入原始劇情流程圖（尚未儲存）");
+      }
+      undoStack = [];
+      redoStack = [];
+      dirty = false;
+      renderAll();
+      fitView();
+    });
+  }
+
+  // 直接使用瀏覽器 localStorage 儲存於本機，無需匯出/匯入 JSON 即可保留進度。
+  // 注意：localStorage 綁定於「這個瀏覽器＋這個檔案路徑」，換瀏覽器或換電腦不會同步，
+  // 若要跨裝置備份，仍可使用「匯出 JSON」。
+  function tryLoadFromStorage(cb) {
+    try {
+      var raw = window.localStorage ? window.localStorage.getItem(STORAGE_KEY) : null;
+      if (raw) { cb(JSON.parse(raw)); return; }
+    } catch (e) { /* 讀取失敗則視為沒有存檔 */ }
+    cb(null);
+  }
+
+  function saveToStorage(manual) {
+    try {
+      if (!window.localStorage) throw new Error("此瀏覽器不支援本機儲存");
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      dirty = false;
+      setStatus((manual ? "已手動儲存至本機瀏覽器（" : "已自動儲存至本機瀏覽器（") + new Date().toLocaleTimeString("zh-TW") + "）");
+    } catch (e) {
+      setStatus("儲存失敗：" + (e && e.message ? e.message : "瀏覽器儲存空間不足或已停用本機儲存") + "，請改用「匯出 JSON」備份");
+    }
+  }
+
+  function setStatus(text) {
+    if (els.statusText) els.statusText.textContent = text;
+  }
+
+  function markDirty() {
+    dirty = true;
+    setStatus("有未儲存的變更");
+    saveToStorage(false);
+  }
+
+  // ---------------------------------------------------------------------
+  // Undo / Redo
+  // ---------------------------------------------------------------------
+  function pushUndo() {
+    undoStack.push(clone(state));
+    if (undoStack.length > 80) undoStack.shift();
+    redoStack = [];
+  }
+
+  function undo() {
+    if (!undoStack.length) return;
+    redoStack.push(clone(state));
+    state = undoStack.pop();
+    selection = { kind: null, id: null };
+    closePanel();
+    renderAll();
+    markDirty();
+  }
+
+  function redo() {
+    if (!redoStack.length) return;
+    undoStack.push(clone(state));
+    state = redoStack.pop();
+    selection = { kind: null, id: null };
+    closePanel();
+    renderAll();
+    markDirty();
+  }
+
+  // ---------------------------------------------------------------------
+  // 自動排版（依層級 BFS/DFS，處理迴圈）
+  // ---------------------------------------------------------------------
+  function laneOf(id) {
+    var rules = [
+      [/^xy/, 0],
+      [/^(cp15|cp16|cp17|cp18|cp19|cp20)/, 0],
+      [/^cp/, 1],
+      [/^(s1|n3$|n4$|n5$|n6$|n37|n38|n39|n40|n67|n68|n69|n70)/, 2],
+      [/^ex/, 2],
+      [/^(pr|s2n1|n1$|n11|n12|n13|n14|n15|n16|n17|n18|n19|n20|n21|n22|n23$|n41|n42|n43|n44|n45|n46|n47|n48|n49|n50|n51|n52$|n91$|n92$)/, 3],
+      [/^(n7$|n8$|n9$|n10$|n29|n30|n31|n32|n33|n34|n35|n36|s3n|s4|n9[3-9]|n10\d|n11[0-9]|n12[0-2]|n12[4-9]|n13[0-9]|n14[0-2])/, 4],
+      [/^(s2n2|s2d|s2o|n53|n54|n55|n56|n57|n58|n59|n60|n61|n62|s3o1)/, 5],
+      [/^(n63|n64|n65|n66|n71|n72|n73|n74|n75|n76|n77|n78|n79|n80|n81|n82|n83|n84|n85|n86|n87|n88|n89|n90|ug)/, 6],
+      [/^(s5|n123|n14[3-9]|n15\d|n16[0-9]|n17[0]|n19[4-9]|n20\d|n21[0-2]|ep)/, 7]
+    ];
+    for (var i = 0; i < rules.length; i++) {
+      if (rules[i][0].test(id)) return rules[i][1];
+    }
+    return 3;
+  }
+
+  function autoLayout(st) {
+    var nodes = st.nodes, edges = st.edges;
+    var byId = {};
+    nodes.forEach(function (n) { byId[n.id] = n; });
+    var out = {};
+    nodes.forEach(function (n) { out[n.id] = []; });
+    edges.forEach(function (e) {
+      if (byId[e.from] && byId[e.to]) out[e.from].push(e.to);
+    });
+
+    var visiting = {}, visited = {}, backEdgeSet = {};
+    function dfs(u) {
+      visiting[u] = true;
+      (out[u] || []).forEach(function (v) {
+        var key = u + ">" + v;
+        if (visiting[v]) { backEdgeSet[key] = true; return; }
+        if (!visited[v]) dfs(v);
+      });
+      visiting[u] = false;
+      visited[u] = true;
+    }
+    nodes.forEach(function (n) { if (!visited[n.id]) dfs(n.id); });
+
+    var forwardOut = {}, forwardIndeg = {};
+    nodes.forEach(function (n) { forwardOut[n.id] = []; forwardIndeg[n.id] = 0; });
+    edges.forEach(function (e) {
+      if (!byId[e.from] || !byId[e.to]) return;
+      if (backEdgeSet[e.from + ">" + e.to]) return;
+      forwardOut[e.from].push(e.to);
+      forwardIndeg[e.to]++;
+    });
+
+    var level = {};
+    nodes.forEach(function (n) { level[n.id] = 0; });
+    var queue = nodes.filter(function (n) { return forwardIndeg[n.id] === 0; }).map(function (n) { return n.id; });
+    var indegCopy = clone(forwardIndeg);
+    var order = [];
+    while (queue.length) {
+      var u = queue.shift();
+      order.push(u);
+      (forwardOut[u] || []).forEach(function (v) {
+        if (level[v] < level[u] + 1) level[v] = level[u] + 1;
+        indegCopy[v]--;
+        if (indegCopy[v] === 0) queue.push(v);
+      });
+    }
+    nodes.forEach(function (n) { if (order.indexOf(n.id) === -1) order.push(n.id); });
+
+    var maxLevel = 0;
+    nodes.forEach(function (n) { if (level[n.id] > maxLevel) maxLevel = level[n.id]; });
+
+    var used = {};
+    nodes.forEach(function (n) { used[laneOf(n.id)] = true; });
+    var compact = {}, ci = 0;
+    for (var ln = 0; ln < 8; ln++) {
+      if (used[ln]) compact[ln] = ci++;
+    }
+
+    var posIndex = {};
+    order.forEach(function (id, idx) { posIndex[id] = idx; });
+
+    var cells = [];
+    for (var lv = 0; lv <= maxLevel; lv++) cells[lv] = {};
+    order.forEach(function (id) {
+      var ln = compact[laneOf(id)];
+      if (ln == null) ln = 0;
+      if (!cells[level[id]][ln]) cells[level[id]][ln] = [];
+      cells[level[id]][ln].push(id);
+    });
+
+    for (var pass = 0; pass < 2; pass++) {
+      for (var lv2 = 1; lv2 <= maxLevel; lv2++) {
+        Object.keys(cells[lv2]).forEach(function (lnKey) {
+          var g = cells[lv2][lnKey];
+          g.sort(function (a, b) {
+            var sa = 0, sb = 0, ca = 0, cb = 0;
+            edges.forEach(function (e) {
+              if (e.to === a && byId[e.from] && level[e.from] < level[a]) { sa += (posIndex[e.from] || 0); ca++; }
+              if (e.to === b && byId[e.from] && level[e.from] < level[b]) { sb += (posIndex[e.from] || 0); cb++; }
+            });
+            var ba = ca ? sa / ca : posIndex[a] || 0;
+            var bb = cb ? sb / cb : posIndex[b] || 0;
+            var oa = byId[a] && byId[a].original ? -1 : 0;
+            var ob = byId[b] && byId[b].original ? -1 : 0;
+            if (oa !== ob) return oa - ob;
+            return ba - bb;
+          });
+          cells[lv2][lnKey] = g;
+          g.forEach(function (id, idx) { posIndex[id] = idx; });
+        });
+      }
+    }
+
+    var laneMax = [];
+    for (var i = 0; i < ci; i++) laneMax[i] = 1;
+    cells.forEach(function (row) {
+      Object.keys(row).forEach(function (lnKey) {
+        var k = parseInt(lnKey, 10);
+        laneMax[k] = Math.max(laneMax[k] || 1, row[lnKey].length);
+      });
+    });
+    var laneStart = [48];
+    for (var i2 = 1; i2 < ci; i2++) {
+      laneStart[i2] = laneStart[i2 - 1] + laneMax[i2 - 1] * COL_GAP_X + LANE_GAP_X;
+    }
+
+    cells.forEach(function (row, lv) {
+      Object.keys(row).forEach(function (lnKey) {
+        var k = parseInt(lnKey, 10);
+        var g = row[lnKey];
+        var blockW = (Math.max(g.length, 1) - 1) * COL_GAP_X;
+        var laneW = Math.max(laneMax[k] - 1, 0) * COL_GAP_X;
+        var offset = (laneW - blockW) / 2;
+        g.forEach(function (id, idx) {
+          var n = byId[id];
+          n.y = 48 + lv * LEVEL_GAP_Y;
+          n.x = laneStart[k] + offset + idx * COL_GAP_X;
+        });
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // 節點 / 邊 CRUD
+  // ---------------------------------------------------------------------
+  function addNode(x, y) {
+    pushUndo();
+    var n = {
+      id: uid("nd_"),
+      code: "",
+      text: "新節點",
+      effect: "",
+      type: "normal",
+      original: false,
+      x: x != null ? x : (-panX / zoom + 200),
+      y: y != null ? y : (-panY / zoom + 120)
+    };
+    state.nodes.push(n);
+    renderAll();
+    markDirty();
+    selectItem("node", n.id);
+    return n;
+  }
+
+  function deleteNode(id) {
+    pushUndo();
+    state.nodes = state.nodes.filter(function (n) { return n.id !== id; });
+    state.edges = state.edges.filter(function (e) { return e.from !== id && e.to !== id; });
+    renderAll();
+    markDirty();
+  }
+
+  function addEdge(fromId, toId, label) {
+    if (fromId === toId) return null;
+    var exists = state.edges.some(function (e) { return e.from === fromId && e.to === toId; });
+    if (exists) return null;
+    pushUndo();
+    var e = { id: uid("eg_"), from: fromId, to: toId, label: label || "" };
+    state.edges.push(e);
+    renderAll();
+    markDirty();
+    return e;
+  }
+
+  function deleteEdge(id) {
+    pushUndo();
+    state.edges = state.edges.filter(function (e) { return e.id !== id; });
+    renderAll();
+    markDirty();
+  }
+
+  function updateNodeFields(id, fields) {
+    var n = state.nodes.find(function (n) { return n.id === id; });
+    if (!n) return;
+    pushUndo();
+    Object.assign(n, fields);
+    renderAll();
+    markDirty();
+  }
+
+  function updateEdgeFields(id, fields) {
+    var e = state.edges.find(function (e) { return e.id === id; });
+    if (!e) return;
+    pushUndo();
+    Object.assign(e, fields);
+    renderAll();
+    markDirty();
+  }
+
+  // ---------------------------------------------------------------------
+  // 渲染
+  // ---------------------------------------------------------------------
+  function bounds() {
+    var maxX = 800, maxY = 600;
+    state.nodes.forEach(function (n) {
+      if (n.x + NODE_W + 120 > maxX) maxX = n.x + NODE_W + 120;
+      if (n.y + NODE_MIN_H + 120 > maxY) maxY = n.y + NODE_MIN_H + 120;
+    });
+    return { w: maxX, h: maxY };
+  }
+
+  function renderAll() {
+    var b = bounds();
+    els.world.style.width = b.w + "px";
+    els.world.style.height = b.h + "px";
+    els.svg.setAttribute("width", b.w);
+    els.svg.setAttribute("height", b.h);
+    els.svg.setAttribute("viewBox", "0 0 " + b.w + " " + b.h);
+
+    rebuildPlaythrough();
+    renderNodes();
+    renderEdges();
+    renderPathPanel();
+    applyTransform();
+    updateCount();
+  }
+
+  function renderNodes() {
+    var existing = {};
+    $all(".fc-node").forEach(function (el) { existing[el.dataset.id] = el; });
+    var seen = {};
+
+    state.nodes.forEach(function (n) {
+      seen[n.id] = true;
+      var el = existing[n.id];
+      if (!el) {
+        el = document.createElement("div");
+        el.className = "fc-node";
+        el.dataset.id = n.id;
+        el.innerHTML =
+          '<div class="fc-node-head"><span class="fc-node-left"><span class="fc-node-code"></span><span class="fc-node-badge"></span></span><span class="fc-node-type"></span></div>' +
+          '<div class="fc-node-text"></div>' +
+          '<div class="fc-node-effect"></div>';
+        els.world.appendChild(el);
+        el.addEventListener("mousedown", function (ev) { onNodeMouseDown(ev, n.id); });
+        el.addEventListener("click", function (ev) { onNodeClick(ev, n.id); });
+      }
+      var meta = TYPE_META[n.type] || TYPE_META.normal;
+      el.className = "fc-node " + meta.cls +
+        (n.original ? " is-original" : "") +
+        (selection.kind === "node" && selection.id === n.id ? " is-selected" : "") +
+        (connectMode && connectFrom === n.id ? " is-connect-from" : "") +
+        pathNodeClass(n);
+      el.style.left = n.x + "px";
+      el.style.top = n.y + "px";
+      el.style.width = NODE_W + "px";
+      el.querySelector(".fc-node-code").textContent = n.code || "";
+      el.querySelector(".fc-node-badge").textContent = n.original ? "★" : "";
+      el.querySelector(".fc-node-type").textContent = meta.label;
+      el.querySelector(".fc-node-text").textContent = n.text || "（未命名節點）";
+      var effectEl = el.querySelector(".fc-node-effect");
+      effectEl.innerHTML = formatEffectHtml(n.effect || "");
+      effectEl.style.display = n.effect ? "block" : "none";
+    });
+
+    Object.keys(existing).forEach(function (id) {
+      if (!seen[id]) existing[id].remove();
+    });
+  }
+
+  function nodeCenter(n, side) {
+    // side: 'bottom' | 'top'
+    var h = document.querySelector('.fc-node[data-id="' + n.id + '"]');
+    var height = h ? h.offsetHeight : NODE_MIN_H;
+    var cx = n.x + NODE_W / 2;
+    if (side === "top") return { x: cx, y: n.y };
+    return { x: cx, y: n.y + height };
+  }
+
+  function renderEdges() {
+    var byId = {};
+    state.nodes.forEach(function (n) { byId[n.id] = n; });
+    var svg = els.svg;
+    svg.innerHTML =
+      '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" fill="var(--edge-color)"></path></marker>' +
+      '<marker id="arrowSel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"></path></marker>' +
+      '<marker id="arrowHighlight" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" fill="var(--node-ending)"></path></marker>' +
+      '<marker id="arrowMet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" fill="#5fd692"></path></marker>' +
+      '<marker id="arrowUnmet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" fill="#ff6b76"></path></marker></defs>';
+
+    state.edges.forEach(function (e) {
+      var a = byId[e.from], b = byId[e.to];
+      if (!a || !b) return;
+      var isBack = b.y < a.y - 10;
+      var p1 = nodeCenter(a, "bottom");
+      var p2 = nodeCenter(b, "top");
+      if (isBack) { p1 = nodeCenter(a, "top"); p2 = nodeCenter(b, "bottom"); }
+      var dx = (p2.x - p1.x) * 0.15;
+      var midY = (p1.y + p2.y) / 2;
+      var pathD = "M " + p1.x + " " + p1.y + " C " + (p1.x + dx) + " " + midY + ", " + (p2.x - dx) + " " + midY + ", " + p2.x + " " + p2.y;
+
+      var isSel = selection.kind === "edge" && selection.id === e.id;
+      var isHighlight = highlightEdgeIds.has(e.id);
+      var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "fc-edge-g" + (isSel ? " is-selected" : "") + (isHighlight ? " is-path-highlight" : "") + pathEdgeClass(e));
+
+      var hit = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      hit.setAttribute("d", pathD);
+      hit.setAttribute("class", "fc-edge-hit");
+      hit.addEventListener("click", function (ev) { ev.stopPropagation(); selectItem("edge", e.id); });
+
+      var line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      line.setAttribute("d", pathD);
+      line.setAttribute("class", "fc-edge-line" + (isBack ? " is-back" : ""));
+      var marker = "url(#arrow)";
+      if (isSel) marker = "url(#arrowSel)";
+      else if (isHighlight) marker = "url(#arrowHighlight)";
+      else if (condEdgeState[e.id] === "met") marker = "url(#arrowMet)";
+      else if (condEdgeState[e.id] === "unmet") marker = "url(#arrowUnmet)";
+      line.setAttribute("marker-end", marker);
+
+      g.appendChild(line);
+      g.appendChild(hit);
+
+      if (e.label) {
+        var midX = (p1.x + p2.x) / 2;
+        var lines = String(e.label).split(/\n/);
+        var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        t.setAttribute("x", midX);
+        t.setAttribute("y", String(midY - 4 - Math.max(lines.length - 1, 0) * 6));
+        t.setAttribute("class", "fc-edge-label");
+        lines.forEach(function (line, li) {
+          var ts = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+          ts.setAttribute("x", String(midX));
+          ts.setAttribute("dy", li === 0 ? "0" : "1.2em");
+          ts.textContent = line;
+          t.appendChild(ts);
+        });
+        g.appendChild(t);
+      }
+      svg.appendChild(g);
+    });
+  }
+
+  function applyTransform() {
+    els.world.style.transform = "translate(" + panX + "px," + panY + "px) scale(" + zoom + ")";
+    var z = document.getElementById("zoomLabel");
+    if (z) z.textContent = Math.round(zoom * 100) + "%";
+  }
+
+  function updateCount() {
+    els.countText.textContent = "節點：" + state.nodes.length + "　連線：" + state.edges.length;
+  }
+
+  function fitView() {
+    zoom = 0.38;
+    panX = 24;
+    panY = 24;
+    applyTransform();
+  }
+
+  // ---------------------------------------------------------------------
+  // 互動：拖曳節點 / 平移 / 縮放
+  // ---------------------------------------------------------------------
+  var preDragSnapshot = null;
+
+  function onNodeMouseDown(ev, id) {
+    if (ev.button !== 0) return;
+    ev.stopPropagation();
+    if (connectMode) return; // 連線模式下由 click 處理
+    var n = state.nodes.find(function (n) { return n.id === id; });
+    preDragSnapshot = clone(state);
+    dragging = {
+      id: id,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      origX: n.x,
+      origY: n.y,
+      moved: false
+    };
+  }
+
+  function onNodeClick(ev, id) {
+    ev.stopPropagation();
+    if (connectMode) {
+      handleConnectClick(id);
+      return;
+    }
+    if (dragging && dragging.moved) return;
+    selectItem("node", id);
+  }
+
+  function handleConnectClick(id) {
+    if (!connectFrom) {
+      connectFrom = id;
+      setStatus("連線模式：已選取起點，請點擊終點節點（再次點擊同一節點可取消）");
+      renderNodes();
+      return;
+    }
+    if (connectFrom === id) {
+      connectFrom = null;
+      setStatus("連線模式：已取消起點，請重新選取起點節點");
+      renderNodes();
+      return;
+    }
+    var label = window.prompt("為這條連線新增文字說明（分支條件／可留空）：", "");
+    if (label === null) { connectFrom = null; renderNodes(); return; }
+    addEdge(connectFrom, id, label);
+    connectFrom = null;
+    setStatus("已新增連線，請選取下一個起點節點，或點擊「連線模式」按鈕結束");
+  }
+
+  function bindCanvasEvents() {
+    els.viewport.addEventListener("mousedown", function (ev) {
+      if (ev.target !== els.viewport && ev.target !== els.world && ev.target !== els.svg) return;
+      panning = { startX: ev.clientX, startY: ev.clientY, origPanX: panX, origPanY: panY };
+      deselectAll();
+    });
+
+    window.addEventListener("mousemove", function (ev) {
+      if (dragging) {
+        var dx = (ev.clientX - dragging.startX) / zoom;
+        var dy = (ev.clientY - dragging.startY) / zoom;
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragging.moved = true;
+        var n = state.nodes.find(function (n) { return n.id === dragging.id; });
+        n.x = Math.max(0, dragging.origX + dx);
+        n.y = Math.max(0, dragging.origY + dy);
+        renderNodes();
+        renderEdges();
+      } else if (panning) {
+        panX = panning.origPanX + (ev.clientX - panning.startX);
+        panY = panning.origPanY + (ev.clientY - panning.startY);
+        applyTransform();
+      }
+    });
+
+    window.addEventListener("mouseup", function () {
+      if (dragging) {
+        if (dragging.moved) { commitDragUndo(); markDirty(); }
+        else { preDragSnapshot = null; }
+        dragging = null;
+      }
+      panning = null;
+    });
+
+    els.viewport.addEventListener("wheel", function (ev) {
+      ev.preventDefault();
+      var rect = els.viewport.getBoundingClientRect();
+      var mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+      var worldX = (mx - panX) / zoom, worldY = (my - panY) / zoom;
+      var delta = ev.deltaY > 0 ? 0.9 : 1.1;
+      var newZoom = Math.min(2.2, Math.max(0.15, zoom * delta));
+      panX = mx - worldX * newZoom;
+      panY = my - worldY * newZoom;
+      zoom = newZoom;
+      applyTransform();
+    }, { passive: false });
+  }
+
+  // 因為拖曳結束時 state 已經被就地修改，這裡把「拖曳前」快照補進 undo stack
+  function commitDragUndo() {
+    if (preDragSnapshot) {
+      undoStack.push(preDragSnapshot);
+      if (undoStack.length > 80) undoStack.shift();
+      redoStack = [];
+      preDragSnapshot = null;
+    }
+  }
+
+  function deselectAll() {
+    selection = { kind: null, id: null };
+    highlightEdgeIds = playthroughEdgeIds;
+    closePanel();
+    renderNodes();
+    renderEdges();
+  }
+
+  // 計算「所有通往指定結局節點」的路徑連線（沿 to→from 反向追溯所有祖先連線）。
+  function computeAncestorEdges(nodeId) {
+    var edgesByTo = {};
+    state.edges.forEach(function (e) {
+      (edgesByTo[e.to] = edgesByTo[e.to] || []).push(e);
+    });
+    var visitedNodes = { };
+    visitedNodes[nodeId] = true;
+    var highlighted = new Set();
+    var queue = [nodeId];
+    while (queue.length) {
+      var cur = queue.shift();
+      var incoming = edgesByTo[cur] || [];
+      incoming.forEach(function (e) {
+        highlighted.add(e.id);
+        if (!visitedNodes[e.from]) {
+          visitedNodes[e.from] = true;
+          queue.push(e.from);
+        }
+      });
+    }
+    return highlighted;
+  }
+
+  function selectItem(kind, id) {
+    selection = { kind: kind, id: id };
+    if (kind === "node") {
+      updatePlaythroughFromClick(id);
+      var n = state.nodes.find(function (n) { return n.id === id; });
+      if (n) {
+        setStatus("已累計至「" + (n.text || "此節點") + "」・" + playthroughNodeIds.size + " 個節點");
+      }
+    }
+    renderNodes();
+    renderEdges();
+    renderPathPanel();
+    openEditor(kind, id);
+  }
+
+  // ---------------------------------------------------------------------
+  // 編輯面板
+  // ---------------------------------------------------------------------
+  function closePanel() {
+    els.panel.classList.remove("open");
+  }
+
+  function openEditor(kind, id) {
+    if (kind === "node") openNodeEditor(id);
+    else if (kind === "edge") openEdgeEditor(id);
+  }
+
+  function openNodeEditor(id) {
+    var n = state.nodes.find(function (n) { return n.id === id; });
+    if (!n) return;
+    els.panelTitle.textContent = "編輯節點";
+    var typeOptions = Object.keys(TYPE_META).map(function (key) {
+      return '<option value="' + key + '"' + (n.type === key ? " selected" : "") + '>' + TYPE_META[key].label + "</option>";
+    }).join("");
+
+    els.panelBody.innerHTML =
+      '<label class="fc-field-label">節點編號（如 A1、路線O、E-14，可留空）</label>' +
+      '<input type="text" id="fldCode" value="' + escapeHtml(n.code || "") + '" placeholder="例如：A1 / 路線O" />' +
+      '<label class="fc-field-label">節點文字</label>' +
+      '<textarea id="fldText" rows="3">' + escapeHtml(n.text) + '</textarea>' +
+      '<label class="fc-field-label">效果說明（隱藏數值，可點「📊 隱藏數值系統」查看定義；好感請寫明琪琪／黑貓／母親）</label>' +
+      '<textarea id="fldEffect" rows="3" placeholder="例如：心理韌性-5；家庭壓力+5">' + escapeHtml(n.effect) + '</textarea>' +
+      '<div id="fldEffectPreview" class="fc-effect-preview">' + (formatEffectHtml(n.effect) || '<span style="color:var(--text-dim)">（無）</span>') + '</div>' +
+      '<div id="statQuickAdd">' +
+      '<select id="statQuickAddName">' + STAT_NAME_LIST.map(function (s) { return '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>'; }).join("") + '</select>' +
+      '<select id="statQuickAddSign"><option value="1">＋</option><option value="-1">－</option></select>' +
+      '<input type="number" id="statQuickAddVal" value="5" min="0" step="1" />' +
+      '<button id="btnStatQuickAdd" class="fc-btn">加入</button>' +
+      '</div>' +
+      '<div class="fc-quickadd-hint">用上方選單插入標準數值，避免手動輸入造成新的命名變體；同一數值重複插入會自動加總。</div>' +
+      '<label class="fc-field-label">類型</label>' +
+      '<select id="fldType">' + typeOptions + '</select>' +
+      '<label class="fc-field-check"><input type="checkbox" id="fldOriginal"' + (n.original ? " checked" : "") + '/> ★ 標示為小說原作路線</label>' +
+      '<div class="fc-panel-actions">' +
+      '<button id="btnSaveNode" class="fc-btn fc-btn-primary">儲存變更</button>' +
+      '<button id="btnStartConnectFrom" class="fc-btn">從此節點連線 →</button>' +
+      '<button id="btnDeleteNode" class="fc-btn fc-btn-danger">刪除此節點</button>' +
+      '</div>' +
+      '<div class="fc-panel-sub"><div class="fc-field-label">相關連線</div><div id="relatedEdges"></div></div>';
+
+    els.panel.classList.add("open");
+
+    $("#fldEffect").addEventListener("input", function () {
+      var preview = $("#fldEffectPreview");
+      if (preview) preview.innerHTML = formatEffectHtml($("#fldEffect").value) || '<span style="color:var(--text-dim)">（無）</span>';
+    });
+
+    $("#btnStatQuickAdd").addEventListener("click", function () {
+      var name = $("#statQuickAddName").value;
+      var sign = parseFloat($("#statQuickAddSign").value);
+      var val = parseFloat($("#statQuickAddVal").value) || 0;
+      if (!val) return;
+      var fld = $("#fldEffect");
+      fld.value = insertStatIntoEffect(fld.value, name, sign * val);
+      var preview = $("#fldEffectPreview");
+      if (preview) preview.innerHTML = formatEffectHtml(fld.value) || '<span style="color:var(--text-dim)">（無）</span>';
+    });
+
+    $("#btnSaveNode").addEventListener("click", function () {
+      updateNodeFields(id, {
+        code: $("#fldCode").value,
+        text: $("#fldText").value,
+        effect: $("#fldEffect").value,
+        type: $("#fldType").value,
+        original: $("#fldOriginal").checked
+      });
+      openNodeEditor(id);
+    });
+    $("#btnDeleteNode").addEventListener("click", function () {
+      if (window.confirm("確定要刪除此節點嗎？相關連線也會一併移除。")) {
+        deleteNode(id);
+        closePanel();
+      }
+    });
+    $("#btnStartConnectFrom").addEventListener("click", function () {
+      connectMode = true;
+      connectFrom = id;
+      $("#connectModeBtn").classList.add("active");
+      setStatus("連線模式：已選取起點「" + n.text + "」，請點擊終點節點");
+      closePanel();
+      renderNodes();
+    });
+
+    var relBox = $("#relatedEdges");
+    var rel = state.edges.filter(function (e) { return e.from === id || e.to === id; });
+    if (!rel.length) {
+      relBox.innerHTML = '<div class="fc-empty">（尚無連線）</div>';
+    } else {
+      var byId = {};
+      state.nodes.forEach(function (n2) { byId[n2.id] = n2; });
+      relBox.innerHTML = rel.map(function (e) {
+        var dir = e.from === id ? "→ " + safeName(byId[e.to]) : "← " + safeName(byId[e.from]);
+        return '<div class="fc-related-edge" data-eid="' + e.id + '">' + dir + (e.label ? '　<span class="fc-related-label">〔' + escapeHtml(e.label) + '〕</span>' : '') + '</div>';
+      }).join("");
+      $all(".fc-related-edge").forEach(function (el) {
+        el.addEventListener("click", function () { selectItem("edge", el.dataset.eid); });
+      });
+    }
+  }
+
+  function safeName(n) { return n ? (n.text || "（未命名）") : "（已刪除節點）"; }
+
+  function openEdgeEditor(id) {
+    var e = state.edges.find(function (e) { return e.id === id; });
+    if (!e) return;
+    var byId = {};
+    state.nodes.forEach(function (n) { byId[n.id] = n; });
+    els.panelTitle.textContent = "編輯連線";
+    els.panelBody.innerHTML =
+      '<div class="fc-edge-endpoints">' + escapeHtml(safeName(byId[e.from])) + '　→　' + escapeHtml(safeName(byId[e.to])) + '</div>' +
+      '<label class="fc-field-label">連線說明（分支條件／文字）</label>' +
+      '<textarea id="fldLabel" rows="2">' + escapeHtml(e.label) + '</textarea>' +
+      '<div class="fc-panel-actions">' +
+      '<button id="btnSaveEdge" class="fc-btn fc-btn-primary">儲存變更</button>' +
+      '<button id="btnReverseEdge" class="fc-btn">反轉方向</button>' +
+      '<button id="btnDeleteEdge" class="fc-btn fc-btn-danger">刪除此連線</button>' +
+      '</div>';
+    els.panel.classList.add("open");
+
+    $("#btnSaveEdge").addEventListener("click", function () {
+      updateEdgeFields(id, { label: $("#fldLabel").value });
+      openEdgeEditor(id);
+    });
+    $("#btnDeleteEdge").addEventListener("click", function () {
+      deleteEdge(id);
+      closePanel();
+    });
+    $("#btnReverseEdge").addEventListener("click", function () {
+      var from = e.from, to = e.to;
+      updateEdgeFields(id, { from: to, to: from });
+      openEdgeEditor(id);
+    });
+  }
+
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // 將效果說明中的隱藏數值（如 +5、-8、-10%）依正負著色，其餘文字維持預設顏色。
+  var NUM_TOKEN_RE = /([+\-]\d+(?:\.\d+)?%?)/g;
+  function formatEffectHtml(s) {
+    if (!s) return "";
+    var html = escapeHtml(s).replace(NUM_TOKEN_RE, function (m) {
+      var cls = m.charAt(0) === "+" ? "fc-num-pos" : "fc-num-neg";
+      return '<span class="' + cls + '">' + m + "</span>";
+    });
+    return html.replace(/(\d{1,3}%)/g, '<span class="fc-num-odds">$1</span>');
+  }
+
+  // ---------------------------------------------------------------------
+  // 隱藏數值系統面板
+  // ---------------------------------------------------------------------
+  function renderStatPanel() {
+    var byCat = {};
+    var order = [];
+    STAT_DEFINITIONS.forEach(function (s) {
+      if (!byCat[s.category]) { byCat[s.category] = []; order.push(s.category); }
+      byCat[s.category].push(s);
+    });
+    var html = order.map(function (cat) {
+      var cards = byCat[cat].map(function (s) {
+        var aliasHtml = s.aliases.length
+          ? '<div class="stat-card-alias">已歸併的舊寫法：<b>' + s.aliases.map(escapeHtml).join("、") + '</b></div>'
+          : "";
+        return '<div class="stat-card">' +
+          '<div class="stat-card-head"><span class="stat-card-name">' + escapeHtml(s.id) + '</span>' +
+          '<span class="stat-card-range">' + escapeHtml(s.range) + '</span></div>' +
+          '<div class="stat-card-desc">' + escapeHtml(s.desc) + '</div>' +
+          aliasHtml +
+          '</div>';
+      }).join("");
+      return '<div class="stat-cat-title">' + escapeHtml(cat) + '</div>' + cards;
+    }).join("");
+
+    html += '<div class="stat-cat-title">隨機事件機率</div>';
+    html += '<div class="stat-card"><div class="stat-card-head"><span class="stat-card-name">炒股結果</span></div>' +
+      '<div class="stat-card-desc">大賺 15%　／　小賺 25%　／　小賠 20%　／　爆倉融資 40%。四者互斥，總和 100%。</div></div>';
+    html += '<div class="stat-card"><div class="stat-card-head"><span class="stat-card-name">曝光風險數值 → 機率組（工程對照）</span></div>' +
+      '<div class="stat-card-desc">區間含下含上，四段互斥且覆蓋 0～100。三項獨立擲骰，可同時中多項。<br>' +
+      '數值　0～54（低）　／　55～69（中）　／　70～84（高）　／　85～100（極高）<br>' +
+      '母親　8%　　　　　／　22%　　　　　／　45%　　　　　／　70%<br>' +
+      '琪琪　5%　　　　　／　15%　　　　　／　32%　　　　　／　55%<br>' +
+      '黑貓　3%　　　　　／　12%　　　　　／　28%　　　　　／　48%<br>' +
+      '三項皆未中 →「沒被發現」。被母親發現且曝光≥70：另 40% 接【衣櫃的祕密】。完整布林邏輯見《條件判定規格書》。</div></div>';
+
+    $("#statPanelBody").innerHTML = html;
+  }
+
+  function bindStatPanel() {
+    renderStatPanel();
+    $("#statSystemBtn").addEventListener("click", function () {
+      $("#statOverlay").classList.add("open");
+    });
+    $("#statPanelCloseBtn").addEventListener("click", function () {
+      $("#statOverlay").classList.remove("open");
+    });
+    $("#statOverlay").addEventListener("click", function (ev) {
+      if (ev.target.id === "statOverlay") $("#statOverlay").classList.remove("open");
+    });
+  }
+
+  // 將「數值名稱＋正負數字」插入效果說明文字：若該數值已存在則加總數值，否則以「；」分隔附加在後面。
+  function insertStatIntoEffect(text, name, delta) {
+    var segs = (text || "").split("；").map(function (s) { return s.trim(); }).filter(function (s) { return s; });
+    var found = false;
+    for (var i = 0; i < segs.length; i++) {
+      var m = segs[i].match(/^(.+?)([+\-]\d+(?:\.\d+)?)$/);
+      if (m && m[1] === name) {
+        var newVal = parseFloat(m[2]) + delta;
+        if (Math.abs(newVal) < 1e-9) newVal = 0;
+        segs[i] = name + (newVal >= 0 ? "+" : "") + newVal;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      segs.push(name + (delta >= 0 ? "+" : "") + delta);
+    }
+    return segs.join("；");
+  }
+
+  // ---------------------------------------------------------------------
+  // 工具列
+  // ---------------------------------------------------------------------
+  function bindToolbar() {
+    $("#addNodeBtn").addEventListener("click", function () { addNode(); });
+
+    $("#connectModeBtn").addEventListener("click", function (ev) {
+      connectMode = !connectMode;
+      connectFrom = null;
+      ev.currentTarget.classList.toggle("active", connectMode);
+      setStatus(connectMode ? "連線模式：請點擊起點節點" : "");
+      renderNodes();
+    });
+
+    $("#undoBtn").addEventListener("click", undo);
+    $("#redoBtn").addEventListener("click", redo);
+    $("#saveBtn").addEventListener("click", function () { saveToStorage(true); });
+    $("#autoCodeBtn").addEventListener("click", autoDetectCodes);
+
+    $("#layoutBtn").addEventListener("click", function () {
+      pushUndo();
+      autoLayout(state);
+      renderAll();
+      markDirty();
+    });
+
+    $("#zoomInBtn").addEventListener("click", function () { zoom = Math.min(2.2, zoom * 1.15); applyTransform(); });
+    $("#zoomOutBtn").addEventListener("click", function () { zoom = Math.max(0.15, zoom * 0.87); applyTransform(); });
+    $("#zoomResetBtn").addEventListener("click", fitView);
+
+    $("#exportBtn").addEventListener("click", function () {
+      var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "奈奈醬的約定_劇情流程圖.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    $("#importBtn").addEventListener("click", function () { els.importInput.click(); });
+    els.importInput.addEventListener("change", function (ev) {
+      var file = ev.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var data = JSON.parse(reader.result);
+          if (!data.nodes || !data.edges) throw new Error("格式錯誤");
+          pushUndo();
+          state = normalizeState(data);
+          var hasPos = state.nodes.some(function (n) { return typeof n.x === "number"; });
+          if (!hasPos) autoLayout(state);
+          renderAll();
+          markDirty();
+          setStatus("已匯入檔案：" + file.name);
+        } catch (err) {
+          alert("匯入失敗：檔案格式不正確。請確認是本工具匯出的 JSON 檔。");
+        }
+      };
+      reader.readAsText(file);
+      els.importInput.value = "";
+    });
+
+    $("#resetBtn").addEventListener("click", function () {
+      if (!window.confirm("確定要重置為原始劇情流程圖嗎？目前的修改將會遺失（建議先「匯出 JSON」備份）。")) return;
+      pushUndo();
+      pinOrder = [];
+      state = normalizeState(clone(window.__NINAI_INITIAL_DATA__));
+      autoLayout(state);
+      renderAll();
+      markDirty();
+      fitView();
+    });
+
+    els.searchInput.addEventListener("input", function () {
+      var q = els.searchInput.value.trim();
+      if (!q) { els.searchResults.innerHTML = ""; els.searchResults.classList.remove("open"); return; }
+      var hits = state.nodes.filter(function (n) {
+        return (n.text || "").indexOf(q) !== -1 || (n.effect || "").indexOf(q) !== -1 || (n.code || "").indexOf(q) !== -1;
+      }).slice(0, 20);
+      if (!hits.length) {
+        els.searchResults.innerHTML = '<div class="fc-empty">找不到符合的節點</div>';
+      } else {
+        els.searchResults.innerHTML = hits.map(function (n) {
+          var codePart = n.code ? '<span class="fc-node-code" style="margin-right:6px;">' + escapeHtml(n.code) + '</span>' : '';
+          return '<div class="fc-search-hit" data-id="' + n.id + '">' + codePart + escapeHtml(n.text) + '</div>';
+        }).join("");
+        $all(".fc-search-hit").forEach(function (el) {
+          el.addEventListener("click", function () {
+            focusNode(el.dataset.id);
+            els.searchResults.classList.remove("open");
+            els.searchInput.value = "";
+          });
+        });
+      }
+      els.searchResults.classList.add("open");
+    });
+  }
+
+  // 嘗試從既有節點文字自動拆出開頭的「編號」（例如 A1：沉默承受 → 編號 A1／文字 沉默承受）。
+  // 僅套用在「選項／分支」與「結局」類型、且尚未填寫編號的節點，並限制編號樣式避免誤判一般敘述文字。
+  var CODE_PREFIX_RE = /^([A-Za-z0-9\-\/／]{1,12}|路線[^\s：:]{1,3}|開局[^\s：:]{1,3})[：:]\s*/;
+  function autoDetectCodes() {
+    pushUndo();
+    var changed = 0;
+    state.nodes.forEach(function (n) {
+      if ((n.type === "option" || n.type === "ending") && !n.code && n.text) {
+        var m = n.text.match(CODE_PREFIX_RE);
+        if (m) {
+          n.code = m[1];
+          n.text = n.text.slice(m[0].length);
+          changed++;
+        }
+      }
+    });
+    if (!changed) { undoStack.pop(); setStatus("沒有找到可自動拆分的節點編號"); return; }
+    renderAll();
+    markDirty();
+    setStatus("已自動偵測 " + changed + " 個節點編號（如有誤判可按 Ctrl+Z 復原）");
+  }
+
+  function focusNode(id) {
+    var n = state.nodes.find(function (n) { return n.id === id; });
+    if (!n) return;
+    var rect = els.viewport.getBoundingClientRect();
+    zoom = 1;
+    panX = rect.width / 2 - (n.x + NODE_W / 2) * zoom;
+    panY = rect.height / 2 - (n.y + NODE_MIN_H / 2) * zoom;
+    applyTransform();
+    selectItem("node", id);
+  }
+
+  function bindKeyboard() {
+    window.addEventListener("keydown", function (ev) {
+      var tag = (document.activeElement && document.activeElement.tagName) || "";
+      if (tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT") {
+        if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z" && tag !== "TEXTAREA") {
+          // allow default undo inside inputs
+        }
+        return;
+      }
+      if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") {
+        ev.preventDefault();
+        if (ev.shiftKey) redo(); else undo();
+      } else if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "y") {
+        ev.preventDefault(); redo();
+      } else if (ev.key === "Delete" || ev.key === "Backspace") {
+        if (selection.kind === "node") { ev.preventDefault(); deleteNode(selection.id); closePanel(); }
+        else if (selection.kind === "edge") { ev.preventDefault(); deleteEdge(selection.id); closePanel(); }
+      } else if (ev.key === "Escape") {
+        connectMode = false; connectFrom = null;
+        var btn = $("#connectModeBtn"); if (btn) btn.classList.remove("active");
+        deselectAll();
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // 即時累計：路徑加總 + 判定條件高亮
+  // ---------------------------------------------------------------------
+  var STAT_INITIAL = 50;
+  var STAT_MIN = 0;
+  var STAT_MAX = 100;
+  var pinOrder = [];
+  var playthroughNodeIds = new Set();
+  var playthroughEdgeIds = new Set();
+  var condEdgeState = {};
+  var condNodeState = {};
+  var currentTotals = {};
+  var currentUnlocks = [];
+
+  var LEGACY_STAT_MAP = {
+    "容貌焦慮": { to: "心理韌性", invert: true },
+    "依存度": { to: "琪琪好感度", invert: false }
+  };
+
+  function statNamesSorted() {
+    return STAT_NAME_LIST.slice().sort(function (a, b) { return b.length - a.length; });
+  }
+
+  function escapeRegExp(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function clampStat(v) {
+    if (v < STAT_MIN) return STAT_MIN;
+    if (v > STAT_MAX) return STAT_MAX;
+    return v;
+  }
+
+  function emptyTotals() {
+    var t = {};
+    STAT_NAME_LIST.forEach(function (name) { t[name] = STAT_INITIAL; });
+    return t;
+  }
+
+  function canonicalStatName(name, node) {
+    if (STAT_NAME_LIST.indexOf(name) !== -1) return { name: name, invert: false };
+    if (LEGACY_STAT_MAP[name]) return LEGACY_STAT_MAP[name];
+    if (name === "好感度") {
+      var blob = ((node && (node.text || "")) + " " + (node && (node.effect || ""))).toString();
+      if (/黑貓/.test(blob)) return { name: "黑貓好感度", invert: false };
+      if (/母親|媽媽|母/.test(blob)) return { name: "母親好感度", invert: false };
+      return { name: "琪琪好感度", invert: false };
+    }
+    return null;
+  }
+
+  function parseEffectDeltas(text, node) {
+    var deltas = {};
+    var unlocks = [];
+    if (!text) return { deltas: deltas, unlocks: unlocks };
+    var segs = String(text).split(/[；;\n]/);
+    var names = statNamesSorted();
+    segs.forEach(function (seg) {
+      seg = seg.trim();
+      if (!seg) return;
+      var um = seg.match(/解鎖【([^】]+)】/);
+      if (um) unlocks.push(um[1]);
+      else {
+        var um2 = seg.match(/解鎖\s*([^\s；;]+)/);
+        if (um2) unlocks.push(um2[1].replace(/選項$/, "選項"));
+      }
+      var matched = false;
+      names.forEach(function (name) {
+        if (matched) return;
+        var re = new RegExp(escapeRegExp(name) + "\\s*([+\\-]\\d+(?:\\.\\d+)?)");
+        var m = seg.match(re);
+        if (!m) return;
+        var val = parseFloat(m[1]);
+        deltas[name] = (deltas[name] || 0) + val;
+        matched = true;
+      });
+      if (matched) return;
+      Object.keys(LEGACY_STAT_MAP).forEach(function (legacy) {
+        if (matched) return;
+        var re = new RegExp(escapeRegExp(legacy) + "\\s*([+\\-]\\d+(?:\\.\\d+)?)");
+        var m = seg.match(re);
+        if (!m) return;
+        var info = LEGACY_STAT_MAP[legacy];
+        var val = parseFloat(m[1]);
+        if (info.invert) val = -val;
+        deltas[info.to] = (deltas[info.to] || 0) + val;
+        matched = true;
+      });
+      if (matched) return;
+      var gm = seg.match(/好感度\s*([+\-]\d+(?:\.\d+)?)/);
+      if (gm) {
+        var mapped = canonicalStatName("好感度", node);
+        var val2 = parseFloat(gm[1]);
+        deltas[mapped.name] = (deltas[mapped.name] || 0) + val2;
+      }
+    });
+    return { deltas: deltas, unlocks: unlocks };
+  }
+
+  function startId() {
+    var ids = { pr1: 1, n1: 1 };
+    for (var k in ids) {
+      if (state.nodes.some(function (n) { return n.id === k; })) return k;
+    }
+    var indeg = {};
+    state.nodes.forEach(function (n) { indeg[n.id] = 0; });
+    state.edges.forEach(function (e) { if (indeg[e.to] != null) indeg[e.to]++; });
+    var zeros = state.nodes.filter(function (n) { return indeg[n.id] === 0; });
+    return zeros.length ? zeros[0].id : (state.nodes[0] && state.nodes[0].id);
+  }
+
+  function nodeById(id) {
+    return state.nodes.find(function (n) { return n.id === id; });
+  }
+
+  function decisionParentOf(nodeId) {
+    var incoming = state.edges.filter(function (e) { return e.to === nodeId; });
+    for (var i = 0; i < incoming.length; i++) {
+      var n = nodeById(incoming[i].from);
+      if (n && n.type === "decision") return n.id;
+    }
+    return null;
+  }
+
+  function forbiddenOptions(mutex) {
+    var forbidden = {};
+    Object.keys(mutex).forEach(function (decId) {
+      var chosen = mutex[decId];
+      state.edges.forEach(function (e) {
+        if (e.from === decId && e.to !== chosen) {
+          var t = nodeById(e.to);
+          if (t && t.type === "option") forbidden[e.to] = true;
+        }
+      });
+    });
+    return forbidden;
+  }
+
+  function findPathConstrained(fromId, toId, mutex) {
+    if (!fromId || !toId) return null;
+    if (fromId === toId) return { nodes: [toId], edges: [] };
+    var forbidden = forbiddenOptions(mutex || {});
+    if (forbidden[toId]) return null;
+    var byId = {};
+    state.nodes.forEach(function (n) { byId[n.id] = n; });
+    var out = {};
+    state.nodes.forEach(function (n) { out[n.id] = []; });
+    state.edges.forEach(function (e) {
+      if (!byId[e.from] || !byId[e.to]) return;
+      if (forbidden[e.to]) return;
+      out[e.from].push(e);
+    });
+    var dist = {};
+    var prev = {};
+    var prevEdge = {};
+    dist[fromId] = 0;
+    var q = [fromId];
+    var seen = {};
+    while (q.length) {
+      q.sort(function (a, b) { return (dist[a] || 1e15) - (dist[b] || 1e15); });
+      var u = q.shift();
+      if (seen[u]) continue;
+      seen[u] = true;
+      if (u === toId) break;
+      (out[u] || []).forEach(function (e) {
+        var v = e.to;
+        var vn = byId[v];
+        var w = 8;
+        if (vn && vn.original) w = 2;
+        else if (vn && vn.type === "option") w = 7;
+        else if (vn && (vn.type === "stage" || vn.type === "merge")) w = 4;
+        var nd = (dist[u] || 0) + w;
+        if (dist[v] == null || nd < dist[v]) {
+          dist[v] = nd;
+          prev[v] = u;
+          prevEdge[v] = e.id;
+          q.push(v);
+        }
+      });
+    }
+    if (toId !== fromId && prev[toId] == null) return null;
+    var nodes = [];
+    var edges = [];
+    var cur = toId;
+    var guard = 0;
+    while (cur != null && guard++ < 800) {
+      nodes.push(cur);
+      if (cur === fromId) break;
+      if (prevEdge[cur]) edges.push(prevEdge[cur]);
+      cur = prev[cur];
+    }
+    if (nodes[nodes.length - 1] !== fromId) return null;
+    nodes.reverse();
+    edges.reverse();
+    return { nodes: nodes, edges: edges };
+  }
+
+  function rebuildPlaythrough() {
+    playthroughNodeIds = new Set();
+    playthroughEdgeIds = new Set();
+    pinOrder = pinOrder.filter(function (id) { return !!nodeById(id); });
+    var mutex = {};
+    pinOrder.forEach(function (pin) {
+      var parent = decisionParentOf(pin);
+      if (parent) mutex[parent] = pin;
+    });
+    var origin = startId();
+    pinOrder.forEach(function (pin) {
+      var path = findPathConstrained(origin, pin, mutex);
+      if (!path) return;
+      path.nodes.forEach(function (id) { playthroughNodeIds.add(id); });
+      path.edges.forEach(function (eid) { playthroughEdgeIds.add(eid); });
+    });
+    highlightEdgeIds = playthroughEdgeIds;
+    recomputeTotals();
+    recomputeConditions();
+  }
+
+  function updatePlaythroughFromClick(nodeId) {
+    var idx = pinOrder.indexOf(nodeId);
+    if (idx !== -1) pinOrder = pinOrder.slice(0, idx + 1);
+    else pinOrder.push(nodeId);
+    rebuildPlaythrough();
+  }
+
+  function clearPlaythrough() {
+    pinOrder = [];
+    rebuildPlaythrough();
+    renderNodes();
+    renderEdges();
+    renderPathPanel();
+    setStatus("已清除路徑累計，數值回到初始 50");
+  }
+
+  function recomputeTotals() {
+    var totals = emptyTotals();
+    var unlocks = [];
+    var ids = [];
+    playthroughNodeIds.forEach(function (id) { ids.push(id); });
+    ids.forEach(function (id) {
+      var n = nodeById(id);
+      if (!n) return;
+      var parsed = parseEffectDeltas(n.effect || "", n);
+      Object.keys(parsed.deltas).forEach(function (k) {
+        totals[k] = (totals[k] || STAT_INITIAL) + parsed.deltas[k];
+      });
+      parsed.unlocks.forEach(function (u) { if (unlocks.indexOf(u) === -1) unlocks.push(u); });
+    });
+    Object.keys(totals).forEach(function (k) { totals[k] = clampStat(Math.round(totals[k])); });
+    currentTotals = totals;
+    currentUnlocks = unlocks;
+  }
+
+  function collectFlags() {
+    var set = {};
+    playthroughNodeIds.forEach(function (id) { set[id] = true; });
+    var flags = {
+      "被琪琪記住": !!(set.n8 || currentUnlocks.indexOf("被琪琪記住") !== -1),
+      "關心選項": !!(set.n102 || currentUnlocks.indexOf("關心選項") !== -1),
+      "見面": !!(set.n105 || set.n105d || currentUnlocks.indexOf("見面") !== -1),
+      "知道琪琪的住所": !!(set.xyh1 || set.n105d || currentUnlocks.indexOf("知道琪琪的住所") !== -1),
+      "最後影像": !!(set.n114 || currentUnlocks.indexOf("最後影像") !== -1),
+      "觀看最後直播": !!(set.n112 || set.n114),
+      "撥出電話": !!(set.n116 || currentUnlocks.indexOf("撥出電話") !== -1),
+      "諮商": !!(set.n64 || set.n65 || set.s2c1 || currentUnlocks.indexOf("諮商") !== -1),
+      "求助": !!(set.n65 || currentUnlocks.indexOf("求助") !== -1),
+      "自我療癒": !!(set.n66 || currentUnlocks.indexOf("自我療癒") !== -1),
+      "黑貓線已開啟": !!(set.n143 || set.n144 || set.n145 || set.n148),
+      "當面": !!(set.n196 || set.n109),
+      "語音": !!set.n197,
+      "當面/語音": !!(set.n196 || set.n197 || set.n109),
+      "文字坦白": !!set.n198,
+      "追問或行動": !!(set.n102 || set.n105 || set.n105d),
+      "結識小雨": !!(set.cp17 || currentUnlocks.indexOf("地雷系同好・小雨") !== -1 || currentUnlocks.indexOf("地雷系同好") !== -1),
+      "小雨也是男娘": !!(set.xy2 || currentUnlocks.indexOf("小雨也是男娘") !== -1),
+      "現實中的同類": !!(set.xy3a || currentUnlocks.indexOf("現實中的同類") !== -1),
+      "嘗試過cosplay": !!(set.cp6 || set.cp7),
+      "深淵負債": !!(set.s2o9 || currentUnlocks.indexOf("深淵負債") !== -1),
+      "兩人的約定": !!(set.s3n2 || currentUnlocks.indexOf("十萬訂閱約定") !== -1),
+      "完成學業": !!set.n42
+    };
+    flags["第三階段進行過諮商"] = flags["諮商"];
+    flags["第三階段建立關係"] = currentTotals["社交連結"] >= 62 || !!(set.ug2 || set.n59 || set.n62 || set.xy3a || set.xy4a || set.xy4b || set.xy5a);
+    return flags;
+  }
+
+  function evalAtom(raw, stats, flags) {
+    var t = (raw || "").replace(/[()（）]/g, " ").replace(/^需/, "").trim();
+    if (!t) return null;
+    if (/未結識小雨/.test(t)) return !flags["結識小雨"];
+    if (/已結識小雨|結識小雨/.test(t)) return !!flags["結識小雨"];
+    if (/無深淵負債|未解鎖深淵/.test(t)) return !flags["深淵負債"];
+    if (/有深淵負債|深淵負債/.test(t)) return !!flags["深淵負債"];
+    if (/選過H1或H2|嘗試過cosplay|漫展cosplay|女裝\/漫展/.test(t)) return !!flags["嘗試過cosplay"];
+    if (/兩人的約定/.test(t)) return !!flags["兩人的約定"];
+    if (/學業成績優異|未輟學|完成學業/.test(t)) return !!flags["完成學業"];
+    if (/知道琪琪的住所/.test(t)) return !!flags["知道琪琪的住所"];
+    if (/黑貓線未開啟/.test(t)) return !flags["黑貓線已開啟"];
+    if (/黑貓線已開啟/.test(t)) return !!flags["黑貓線已開啟"];
+    if (/第三階段進行過諮商|進行過諮商/.test(t)) return !!flags["諮商"];
+    if (/第三階段建立關係|建立關係/.test(t) && !/社交連結/.test(t)) return !!flags["第三階段建立關係"];
+    if (/當面\s*\/\s*語音|當面\/語音/.test(t) && !/社交連結/.test(t)) return !!flags["當面/語音"];
+    if (/文字坦白/.test(t) && !/社交連結/.test(t)) return !!flags["文字坦白"];
+    if (/追問或行動|R2\s*\/\s*S1|選擇追問/.test(t)) return !!flags["追問或行動"];
+    if (/觀看了最後直播|U1或U3|U1\/U3/.test(t)) return !!flags["觀看最後直播"];
+    if (/撥出電話|選擇撥出|V1/.test(t) && /撥出|電話|V1/.test(t)) return !!flags["撥出電話"];
+    var names = statNamesSorted();
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      var pos = t.indexOf(name);
+      if (pos === -1) continue;
+      var rest = t.slice(pos + name.length).trim();
+      var m;
+      if ((m = rest.match(/^(≥|≧|>=)\s*(\d+)/))) return stats[name] >= parseFloat(m[2]);
+      if ((m = rest.match(/^(≤|≦|<=)\s*(\d+)/))) return stats[name] <= parseFloat(m[2]);
+      if ((m = rest.match(/^>\s*(\d+)/))) return stats[name] > parseFloat(m[2]);
+      if ((m = rest.match(/^<\s*(\d+)/))) return stats[name] < parseFloat(m[2]);
+      if ((m = rest.match(/^(\d+)\s*[~～]\s*(\d+)/))) {
+        return stats[name] >= parseFloat(m[1]) && stats[name] <= parseFloat(m[2]);
+      }
+      if ((m = rest.match(/^(\d+)\s*-\s*(\d+)/))) {
+        return stats[name] >= parseFloat(m[1]) && stats[name] <= parseFloat(m[2]);
+      }
+    }
+    return null;
+  }
+
+  function evalConditionText(text, stats, flags) {
+    if (!text) return null;
+    var t = String(text).replace(/[？?]/g, "").replace(/^[①②③④⑤⑥⑦⑧⑨⑩\d]+[\.．、:：]\s*/, "").trim();
+    if (!t) return null;
+    if (/或/.test(t) && !/且/.test(t)) {
+      var partsOr = t.split("或");
+      var anyKnown = false;
+      var ok = false;
+      for (var i = 0; i < partsOr.length; i++) {
+        var r = evalAtom(partsOr[i], stats, flags);
+        if (r === null) continue;
+        anyKnown = true;
+        if (r) ok = true;
+      }
+      return anyKnown ? ok : null;
+    }
+    if (/且/.test(t)) {
+      var partsAnd = t.split("且");
+      var allKnown = true;
+      var allOk = true;
+      var known = 0;
+      for (var j = 0; j < partsAnd.length; j++) {
+        var r2 = evalAtom(partsAnd[j], stats, flags);
+        if (r2 === null) { allKnown = false; continue; }
+        known++;
+        if (!r2) allOk = false;
+      }
+      if (!known) return null;
+      return allKnown ? allOk : allOk;
+    }
+    return evalAtom(t, stats, flags);
+  }
+
+  function extractConditionSnippets(text) {
+    if (!text) return [];
+    var snippets = [];
+    String(text).split(/\n/).forEach(function (line) {
+      line = line.trim();
+      if (!line) return;
+      if (/[<>≥≤≧≦~～]/.test(line) || /需/.test(line) || /已開啟/.test(line) || /進行過|建立關係|追問或行動|撥出電話|觀看了最後/.test(line)) {
+        snippets.push(line.replace(/^判定[：:].*/, "").trim());
+      }
+    });
+    if (!snippets.length && /[<>≥≤≧≦]/.test(text)) snippets.push(text);
+    return snippets.filter(Boolean);
+  }
+
+  function recomputeConditions() {
+    condEdgeState = {};
+    condNodeState = {};
+    var stats = currentTotals;
+    var flags = collectFlags();
+    state.edges.forEach(function (e) {
+      var r = evalConditionText(e.label || "", stats, flags);
+      if (r === null) return;
+      condEdgeState[e.id] = r ? "met" : "unmet";
+    });
+    state.nodes.forEach(function (n) {
+      var blob = [n.text || "", n.effect || ""].join("\n");
+      var snippets = extractConditionSnippets(blob);
+      if (!snippets.length) return;
+      var results = snippets.map(function (s) { return evalConditionText(s, stats, flags); }).filter(function (x) { return x !== null; });
+      if (!results.length) return;
+      condNodeState[n.id] = results.every(Boolean) ? "met" : "unmet";
+    });
+  }
+
+  function statDefById(id) {
+    return STAT_DEFINITIONS.find(function (s) { return s.id === id; }) || { higherBetter: true };
+  }
+
+  function renderPathPanel() {
+    var statsBox = document.getElementById("pathStats");
+    var flagsBox = document.getElementById("pathFlags");
+    var condsBox = document.getElementById("pathConds");
+    var listBox = document.getElementById("pathList");
+    var metaBox = document.getElementById("pathMeta");
+    if (!statsBox) return;
+    if (!currentTotals || !Object.keys(currentTotals).length) {
+      currentTotals = emptyTotals();
+      currentUnlocks = [];
+      recomputeConditions();
+    }
+    var html = "";
+    STAT_DEFINITIONS.forEach(function (s) {
+      var v = currentTotals[s.id] != null ? currentTotals[s.id] : STAT_INITIAL;
+      var better = s.higherBetter !== false;
+      var delta = v - STAT_INITIAL;
+      var tone = "mid";
+      if (better) tone = v >= 62 ? "good" : (v <= 38 ? "bad" : "mid");
+      else tone = v <= 38 ? "good" : (v >= 62 ? "bad" : "mid");
+      var dtxt = delta === 0 ? "±0" : (delta > 0 ? "+" + delta : String(delta));
+      html += '<div class="path-stat">' +
+        '<div class="path-stat-top"><span>' + escapeHtml(s.id) + '</span>' +
+        '<span class="path-stat-val tone-' + tone + '">' + v + ' <small>' + dtxt + '</small></span></div>' +
+        '<div class="path-bar"><div class="path-bar-fill tone-' + tone + '" style="width:' + v + '%"></div>' +
+        '<div class="path-bar-mark" style="left:50%"></div></div>' +
+        '</div>';
+    });
+    statsBox.innerHTML = html;
+
+    var flags = collectFlags();
+    var flagNames = ["被琪琪記住", "諮商", "見面", "觀看最後直播", "撥出電話", "黑貓線已開啟", "追問或行動"];
+    var flagHtml = flagNames.map(function (f) {
+      return '<span class="path-flag ' + (flags[f] ? "is-on" : "is-off") + '">' + (flags[f] ? "● " : "○ ") + escapeHtml(f) + "</span>";
+    }).join("");
+    if (currentUnlocks.length) {
+      flagHtml += currentUnlocks.map(function (u) {
+        return '<span class="path-flag is-on">● 解鎖 ' + escapeHtml(u) + "</span>";
+      }).join("");
+    }
+    flagsBox.innerHTML = flagHtml || '<span class="path-flag is-off">尚無解鎖旗標</span>';
+
+    var condItems = [];
+    state.edges.forEach(function (e) {
+      if (!e.label) return;
+      var r = evalConditionText(e.label, currentTotals, flags);
+      if (r === null) return;
+      var from = nodeById(e.from);
+      var to = nodeById(e.to);
+      condItems.push({
+        met: r,
+        label: e.label,
+        where: (from && from.text ? from.text.slice(0, 18) : "") + " → " + (to && to.text ? to.text.slice(0, 18) : "")
+      });
+    });
+    state.nodes.forEach(function (n) {
+      extractConditionSnippets((n.text || "") + "\n" + (n.effect || "")).forEach(function (s) {
+        var r = evalConditionText(s, currentTotals, flags);
+        if (r === null) return;
+        condItems.push({ met: r, label: s, where: (n.text || "").slice(0, 22) });
+      });
+    });
+    var seen = {};
+    condItems = condItems.filter(function (it) {
+      var k = it.label.replace(/\s/g, "");
+      if (seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+    var metN = condItems.filter(function (it) { return it.met; }).length;
+    condsBox.innerHTML = '<div class="path-cond-head">判定條件　' + metN + "/" + condItems.length + " 已滿足</div>" +
+      (condItems.length ? condItems.map(function (it) {
+        return '<div class="path-cond ' + (it.met ? "is-met" : "is-unmet") + '">' +
+          '<span class="path-cond-mark">' + (it.met ? "已滿足" : "未滿足") + "</span>" +
+          '<span class="path-cond-label">' + escapeHtml(it.label) + "</span>" +
+          '<span class="path-cond-where">' + escapeHtml(it.where) + "</span></div>";
+      }).join("") : '<div class="fc-empty">目前路徑上沒有可解析的數值判定</div>');
+
+    var pathIds = [];
+    playthroughNodeIds.forEach(function (id) { pathIds.push(id); });
+    var origin = startId();
+    var ordered = [];
+    if (pinOrder.length) {
+      var last = pinOrder[pinOrder.length - 1];
+      var main = findPathConstrained(origin, last, (function () {
+        var mutex = {};
+        pinOrder.forEach(function (pin) {
+          var parent = decisionParentOf(pin);
+          if (parent) mutex[parent] = pin;
+        });
+        return mutex;
+      })());
+      if (main) ordered = main.nodes.slice();
+    }
+    pathIds.forEach(function (id) {
+      if (ordered.indexOf(id) === -1) ordered.push(id);
+    });
+    listBox.innerHTML = ordered.length
+      ? ordered.map(function (id) {
+          var n = nodeById(id);
+          var pinned = pinOrder.indexOf(id) !== -1;
+          return '<div class="path-step' + (pinned ? " is-pin" : "") + '" data-nid="' + id + '">' +
+            (n && n.code ? '<b>' + escapeHtml(n.code) + "</b> " : "") +
+            escapeHtml((n && n.text) || id) + "</div>";
+        }).join("")
+      : '<div class="fc-empty">點選節點以建立路徑。同一決策的選項會互相取代；打工／直播等平行支線可一起點選加總。</div>';
+    $all("#pathList .path-step").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var id = el.getAttribute("data-nid");
+        if (id) focusNode(id);
+      });
+    });
+    if (metaBox) {
+      metaBox.textContent = ordered.length
+        ? ("路徑 " + playthroughNodeIds.size + " 個節點　釘選 " + pinOrder.length)
+        : ("初始值 " + STAT_INITIAL + "　尚未選擇路徑");
+    }
+  }
+
+  function bindPathPanel() {
+    currentTotals = emptyTotals();
+    var btn = document.getElementById("pathClearBtn");
+    if (btn) btn.addEventListener("click", function () { clearPlaythrough(); });
+    renderPathPanel();
+  }
+
+  function pathNodeClass(n) {
+    var extra = "";
+    if (playthroughNodeIds.has(n.id)) extra += " is-on-path";
+    if (condNodeState[n.id] === "met") extra += " is-cond-met";
+    if (condNodeState[n.id] === "unmet") extra += " is-cond-unmet";
+    if (pinOrder.indexOf(n.id) !== -1) extra += " is-path-pin";
+    return extra;
+  }
+
+  function pathEdgeClass(e) {
+    var extra = "";
+    if (condEdgeState[e.id] === "met") extra += " is-cond-met";
+    if (condEdgeState[e.id] === "unmet") extra += " is-cond-unmet";
+    return extra;
+  }
+
+  window.addEventListener("DOMContentLoaded", init);
+})();
+
+</script>
+<script>
+document.getElementById("panelCloseBtn").addEventListener("click", function () {
+  document.getElementById("editorPanel").classList.remove("open");
+});
+</script>
+</body>
+</html>
